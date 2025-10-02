@@ -1,20 +1,22 @@
 from django.urls import path
 from . import views
 
-# กำหนด namespace สำหรับแอปพลิเคชันนี้ เพื่อป้องกันชื่อ URL ซ้ำกัน
 app_name = 'app'
 
 urlpatterns = [
-    # URL สำหรับหน้า Dashboard หลัก
-    path('dashboard/', views.dashboard, name='dashboard'),
+    # Main Dashboard URL
+    path('', views.dashboard, name='dashboard'),
     
-    # URL สำหรับ "กล่องงานอนุมัติ" ของผู้จัดการ, HR, etc.
-    # หมายเหตุ: ตอนนี้เราจะให้มันชี้ไปที่ view dashboard ชั่วคราวก่อน
-    # เพื่อป้องกัน Error เวลาคลิกลิงก์
-    path('approval-inbox/', views.dashboard, name='approval-inbox'),
+    # URLs for employees to create requests
+    path('request/new/', views.create_leave_request, name='create-request'),
     
-    # URL สำหรับหน้า "ประวัติคำขอของฉัน" ของพนักงาน
-    # หมายเหตุ: ตอนนี้เราจะให้มันชี้ไปที่ view dashboard ชั่วคราวก่อนเช่นกัน
-    path('my-requests/', views.dashboard, name='my-requests'),
+    # URLs for viewing requests filtered by status
+    path('requests/pending/', views.pending_requests_view, name='requests-pending'),
+    path('requests/approved/', views.approved_requests_view, name='requests-approved'),
+    path('requests/rejected/', views.rejected_requests_view, name='requests-rejected'),
+
+    # URLs for approvers
+    path('approval-inbox/', views.approval_inbox, name='approval-inbox'),
+    path('approval/process/<int:history_id>/', views.process_approval, name='process-approval'),
 ]
 

@@ -1,5 +1,7 @@
 # app/models.py
 from django.db import models
+from django.contrib.auth.models import User
+from django.utils import timezone
 
 # ตารางที่ 3-8: แผนก (Departments)
 class Department(models.Model):
@@ -13,7 +15,8 @@ class Department(models.Model):
 class Position(models.Model):
     position_id = models.AutoField(primary_key=True)
     position_name = models.CharField(max_length=255)
-    position_level = models.IntegerField()
+    # เราสามารถใช้ level ในการระบุลำดับขั้น เช่น 1=Manager, 2=Supervisor
+    position_level = models.IntegerField() 
 
     def __str__(self):
         return self.position_name
@@ -21,13 +24,16 @@ class Position(models.Model):
 # ตารางที่ 3-14: บทบาท (Roles)
 class Role(models.Model):
     role_id = models.AutoField(primary_key=True)
+    # ควรมี Role: Employee, Manager, Supervisor, HR, Safety
     role_name = models.CharField(max_length=255)
 
     def __str__(self):
         return self.role_name
 
 # ตารางที่ 3-7: พนักงาน (Employees)
+# ขยายความสามารถโดยการเชื่อมกับ User Model ของ Django
 class Employee(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, null=True, blank=True)
     employee_id = models.AutoField(primary_key=True)
     name = models.CharField(max_length=255)
     phone = models.CharField(max_length=32, null=True, blank=True)
@@ -40,66 +46,76 @@ class Employee(models.Model):
     def __str__(self):
         return self.name
 
-# ตารางที่ 3-10: คำขออนุญาต (Complains/Requests)
-class Complain(models.Model):
+# ตารางที่ 3-10: คำขออนุญาต (เปลี่ยนจาก Complain)
+class LeaveRequest(models.Model):
     STATUS_CHOICES = [
-        ('Pending', 'Pending'),
-        ('Approved', 'Approved'),
-        ('Rejected', 'Rejected'),
+        ('Pending', 'รออนุมัติ'),
+        ('Approved', 'อนุมัติแล้ว'),
+        ('Rejected', 'ถูกปฏิเสธ'),
     ]
-    
+    APPROVER_CHOICES = [
+        ('manager', 'รออนุมัติจากผู้จัดการ'),
+        ('supervisor', 'รออนุมัติจากหัวหน้างาน'),
+        ('hr_safety', 'รออนุมัติจาก HR/Safety'),
+        ('completed', 'เสร็จสิ้น'),
+    ]
+    DURATION_CHOICES = [
+        ('3_hours', '3 ชั่วโมง'),
+        ('half_day', 'ครึ่งวัน'),
+        ('full_day', 'เต็มวัน'),
+    ]
+
     request_id = models.AutoField(primary_key=True)
-    request_date = models.DateField()
-    request_time = models.TimeField()
-    reason = models.TextField(null=True, blank=True)
-    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='Pending')
-    attachment = models.CharField(max_length=255, null=True, blank=True)
-    # ความสัมพันธ์ (Foreign Key)
     employee = models.ForeignKey(Employee, on_delete=models.CASCADE, db_column='employee_id')
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='Pending')
+    current_approver_role = models.CharField(max_length=20, choices=APPROVER_CHOICES, default='manager')
+    reason = models.TextField(null=True, blank=True)
+    
+    # *** CHANGED: Replaced auto_now_add with default to fix migration issue ***
+    request_datetime = models.DateTimeField(default=timezone.now)
+
+    leave_date = models.DateField(default=timezone.now)
+    leave_duration = models.CharField(max_length=10, choices=DURATION_CHOICES, default='3_hours')
 
     def __str__(self):
         return f"Request ID: {self.request_id} by {self.employee.name}"
 
-# ตารางที่ 3-11: ประวัติการอนุมัติ (ApprovalHistories)
+
+# ตารางที่ 3-11: ประวัติการอนุมัติ
 class ApprovalHistory(models.Model):
     STATUS_CHOICES = [
-        ('Approved', 'Approved'),
-        ('Rejected', 'Rejected'),
-        ('Pending', 'Pending'),
+        ('Approved', 'อนุมัติ'),
+        ('Rejected', 'ปฏิเสธ'),
+        ('Pending', 'รอการดำเนินการ'),
     ]
 
     history_id = models.AutoField(primary_key=True)
-    approval_order = models.IntegerField()
-    status = models.CharField(max_length=10, choices=STATUS_CHOICES)
+    request = models.ForeignKey(LeaveRequest, on_delete=models.CASCADE, db_column='request_id')
+    approver = models.ForeignKey(Employee, on_delete=models.CASCADE, db_column='approver_id')
+    approval_order = models.IntegerField() # ลำดับขั้น 1=Manager, 2=Supervisor, 3=HR/Safety
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='Pending')
     approval_date = models.DateField(null=True, blank=True)
     approval_time = models.TimeField(null=True, blank=True)
     comment = models.TextField(null=True, blank=True)
-    # ความสัมพันธ์ (Foreign Keys)
-    request = models.ForeignKey(Complain, on_delete=models.CASCADE, db_column='request_id')
-    approver = models.ForeignKey(Employee, on_delete=models.CASCADE, db_column='approver_id')
 
     def __str__(self):
-        return f"History for Request ID: {self.request.request_id}"
+        return f"History for Request ID: {self.request.request_id} by {self.approver.name}"
 
-# ตารางที่ 3-12: ประวัติการเข้า-ออก (InOutHistories)
+# (Optional) ตารางประวัติการเข้า-ออก
 class InOutHistory(models.Model):
     history_id = models.AutoField(primary_key=True)
-    time_in = models.DateTimeField(null=True, blank=True)
-    time_out = models.DateTimeField(null=True, blank=True)
-    # ความสัมพันธ์ (Foreign Keys)
+    request = models.ForeignKey(LeaveRequest, on_delete=models.CASCADE, db_column='request_id')
     employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='leave_histories', db_column='employee_id')
-    request = models.ForeignKey(Complain, on_delete=models.CASCADE, db_column='request_id')
-    # --- จุดที่เปลี่ยนแปลง ---
-    # เปลี่ยน 'guard' ให้ชี้ไปที่ Employee และจำกัดให้เลือกได้เฉพาะคนที่มี Role ที่ต้องการ
-    # (สมมติว่าคุณจะสร้าง Role ที่มีชื่อว่า 'Security Guard' ในฐานข้อมูล)
+    time_out = models.DateTimeField(null=True, blank=True)
+    time_in = models.DateTimeField(null=True, blank=True)
     guard = models.ForeignKey(
         Employee,
         on_delete=models.CASCADE,
         related_name='guard_histories',
         db_column='guard_id',
-        limit_choices_to={'role__role_name': 'Security Guard'} # <-- จำกัดการเลือก
+        limit_choices_to={'role__role_name': 'Safety'} 
     )
 
     def __str__(self):
-        return f"InOut for {self.employee.name} on {self.request.request_date}"
+        return f"InOut for {self.employee.name} on request {self.request.request_id}"
 

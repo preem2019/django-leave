@@ -63,13 +63,17 @@
         <h2 class="h4 mb-0">Dashboard</h2>
         <small class="text-muted">ภาพรวมของระบบ</small>
       </div>
+       <a href="{% url 'app:create-request' %}" class="btn btn-primary">
+          <i class="fas fa-plus me-1"></i> สร้างคำขอใหม่
+      </a>
     </div>
 
     <!-- Dashboard Cards -->
     <div class="row">
       <!-- Pending Requests -->
       <div class="col-xl-3 col-md-6 mb-4">
-        <a href="{% if is_approver_or_admin %}{% url 'app:approval-inbox' %}{% else %}{% url 'app:my-requests' %}{% endif %}" class="card dashboard-card bg-card-orange shadow-sm">
+        <!-- *** LINK UPDATED HERE *** -->
+        <a href="{% url 'app:requests-pending' %}" class="card dashboard-card bg-card-orange shadow-sm">
           <div class="card-body">
             <div class="icon-part">
               <i class="fas fa-user-clock"></i>
@@ -84,7 +88,8 @@
 
       <!-- Approved Requests -->
       <div class="col-xl-3 col-md-6 mb-4">
-        <a href="{% url 'app:my-requests' %}" class="card dashboard-card bg-card-blue shadow-sm">
+        <!-- *** LINK UPDATED HERE *** -->
+        <a href="{% url 'app:requests-approved' %}" class="card dashboard-card bg-card-blue shadow-sm">
           <div class="card-body">
             <div class="icon-part">
               <i class="fas fa-check-circle"></i>
@@ -99,7 +104,8 @@
 
       <!-- Rejected Requests -->
       <div class="col-xl-3 col-md-6 mb-4">
-        <a href="{% url 'app:my-requests' %}" class="card dashboard-card bg-card-red shadow-sm">
+        <!-- *** LINK UPDATED HERE *** -->
+        <a href="{% url 'app:requests-rejected' %}" class="card dashboard-card bg-card-red shadow-sm">
           <div class="card-body">
             <div class="icon-part">
               <i class="fas fa-times-circle"></i>
@@ -145,4 +151,3 @@
 
   </div>
 {% endblock %}
-

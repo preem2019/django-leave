@@ -1,0 +1,149 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}สร้างคำขอ - eLeave System{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-container {
+        max-width: 700px;
+        width: 100%;
+        margin: 0 auto;
+    }
+    .form-card {
+        border-radius: 0.75rem;
+        border: none;
+    }
+    .form-card .card-header {
+        background-color: #3498db;
+        color: white;
+        border-top-left-radius: 0.75rem;
+        border-top-right-radius: 0.75rem;
+        padding: 1.5rem;
+        text-align: center;
+    }
+    .form-card .card-header h3 {
+        margin: 0;
+        font-weight: 600;
+    }
+    .form-card .card-body {
+        padding: 2rem;
+    }
+    .form-control:focus, .form-select:focus {
+        box-shadow: 0 0 0 0.25rem rgba(52, 152, 219, 0.25);
+        border-color: #3498db;
+    }
+    .btn-submit {
+        background-color: #2ecc71;
+        border-color: #2ecc71;
+        font-weight: 600;
+        padding: 0.75rem;
+    }
+    .btn-submit:hover {
+        background-color: #27ae60;
+        border-color: #27ae60;
+    }
+    .input-group-text {
+        background-color: #e9ecef;
+        border: 1px solid #ced4da;
+        min-width: 42px;
+        display: flex;
+        justify-content: center;
+    }
+</style>
+{% endblock %}
+
+{% block breadcrumb %}
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item"><a href="{% url 'app:dashboard' %}">Dashboard</a></li>
+            <li class="breadcrumb-item active" aria-current="page"><i class="fas fa-edit me-2"></i>สร้างคำขอใหม่</li>
+        </ol>
+    </nav>
+{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <div class="card form-card shadow-lg">
+        <div class="card-header">
+            <h3><i class="fas fa-file-alt me-2"></i>แบบฟอร์มขออนุญาตออกนอกสถานที่</h3>
+        </div>
+        <div class="card-body">
+            <form method="post" action="{% url 'app:create-request' %}">
+                {% csrf_token %}
+
+                <!-- Auto-filled User Info -->
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">ผู้ยื่นคำขอ</label>
+                        <div class="input-group">
+                             <span class="input-group-text"><i class="fas fa-user"></i></span>
+                             <input type="text" class="form-control" value="{{ request.user.employee.name }}" readonly>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">แผนก</label>
+                         <div class="input-group">
+                             <span class="input-group-text"><i class="fas fa-building"></i></span>
+                            <input type="text" class="form-control" value="{{ request.user.employee.department }}" readonly>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- *** NEW: Date and Duration Selection *** -->
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="leave_date" class="form-label fw-bold">วันที่ออกนอกสถานที่</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-calendar-alt"></i></span>
+                            <input type="date" name="leave_date" id="leave_date" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="leave_duration" class="form-label fw-bold">ระยะเวลา</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-clock"></i></span>
+                            <select name="leave_duration" id="leave_duration" class="form-select" required>
+                                <option selected disabled value="">-- เลือกระยะเวลา --</option>
+                                <option value="3_hours">3 ชั่วโมง</option>
+                                <option value="half_day">ครึ่งวัน</option>
+                                <option value="full_day">เต็มวัน</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Reason for Leaving -->
+                <label for="reason" class="form-label fw-bold">เหตุผลการออกนอกสถานที่</label>
+                <div class="input-group mb-4">
+                     <span class="input-group-text"><i class="fas fa-info-circle"></i></span>
+                    <textarea name="reason" id="reason" class="form-control" rows="4" placeholder="โปรดระบุเหตุผลให้ชัดเจน เช่น เดินทางไปพบลูกค้าบริษัท ABC เรื่อง..." required></textarea>
+                </div>
+
+                <!-- Submit Button -->
+                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                     <a href="{% url 'app:dashboard' %}" class="btn btn-secondary">ยกเลิก</a>
+                    <button type="submit" class="btn btn-submit text-white">
+                        <i class="fas fa-paper-plane me-2"></i>ส่งคำขอ
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Set the default value of the date input to today
+    document.addEventListener('DOMContentLoaded', function() {
+        const today = new Date().toISOString().split('T')[0];
+        const dateInput = document.getElementById('leave_date');
+        if(dateInput) {
+            dateInput.value = today;
+            dateInput.min = today; // Prevent selecting past dates
+        }
+    });
+</script>
+{% endblock %}
+

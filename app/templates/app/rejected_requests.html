@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ status_title }} - eLeave System{% endblock %}
+
+{% block breadcrumb %}
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item"><a href="{% url 'app:dashboard' %}">Dashboard</a></li>
+            <li class="breadcrumb-item active" aria-current="page"><i class="fas fa-list-alt me-2"></i>{{ status_title }}</li>
+        </ol>
+    </nav>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <div>
+        <h2 class="h4 mb-0">{{ status_title }}</h2>
+        <small class="text-muted">รายการคำขอทั้งหมดที่มีสถานะ "{{ status_title }}"</small>
+      </div>
+      <a href="{% url 'app:create-request' %}" class="btn btn-primary">
+          <i class="fas fa-plus me-1"></i> สร้างคำขอใหม่
+      </a>
+    </div>
+
+    {% if requests %}
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>ID คำขอ</th>
+                                <th>วันที่ยื่นเรื่อง</th>
+                                <th>เหตุผล</th>
+                                <th class="text-center">สถานะ</th>
+                                <th>ขั้นตอนปัจจุบัน</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for req in requests %}
+                            <tr>
+                                <td>#{{ req.request_id }}</td>
+                                <td>{{ req.request_date|date:"d M, Y" }}</td>
+                                <td>{{ req.reason|truncatewords:15 }}</td>
+                                <td class="text-center">
+                                    {% if req.status == 'Approved' %}
+                                        <span class="badge bg-success rounded-pill">อนุมัติแล้ว</span>
+                                    {% elif req.status == 'Rejected' %}
+                                        <span class="badge bg-danger rounded-pill">ถูกปฏิเสธ</span>
+                                    {% else %}
+                                        <span class="badge bg-warning text-dark rounded-pill">รออนุมัติ</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ req.get_current_approver_role_display }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    {% else %}
+        <div class="alert alert-info text-center" role="alert">
+            <h4 class="alert-heading"><i class="fas fa-info-circle fa-2x mb-3"></i><br>ไม่พบข้อมูล</h4>
+            <p>ไม่มีรายการคำขอที่มีสถานะเป็น "{{ status_title }}"</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

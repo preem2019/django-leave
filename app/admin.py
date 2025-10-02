@@ -1,8 +1,8 @@
 # app/admin.py
 from django.contrib import admin
-from .models import Department, Position, Role, Employee, Complain, ApprovalHistory, InOutHistory
+from .models import Department, Position, Role, Employee, LeaveRequest, ApprovalHistory, InOutHistory
 
-# 1. การตั้งค่าสำหรับโมเดลที่ไม่ซับซ้อน
+# 1. การตั้งค่าสำหรับโมเดลพื้นฐาน (ไม่มีการเปลี่ยนแปลง)
 # --------------------------------------------
 @admin.register(Department)
 class DepartmentAdmin(admin.ModelAdmin):
@@ -20,23 +20,26 @@ class RoleAdmin(admin.ModelAdmin):
     search_fields = ('role_name',)
 
 
-# 2. การตั้งค่าสำหรับโมเดลหลัก (Employee)
+# 2. การตั้งค่าสำหรับโมเดล Employee (ปรับปรุง)
 # --------------------------------------------
-# Inlines: แสดงข้อมูลที่เกี่ยวข้องในหน้า Employee
-class ComplainInline(admin.TabularInline):
-    model = Complain
-    extra = 0  # ไม่แสดงฟอร์มเปล่าสำหรับเพิ่มข้อมูลใหม่
-    fields = ('request_date', 'reason', 'status')
-    readonly_fields = ('request_date', 'reason', 'status')
+# Inline: แสดงคำขอของพนักงานในหน้า Employee
+class LeaveRequestInline(admin.TabularInline):
+    model = LeaveRequest
+    extra = 0
+    # *** CHANGED: Updated field names to match new model ***
+    fields = ('leave_date', 'leave_duration', 'reason', 'status')
+    readonly_fields = ('leave_date', 'leave_duration', 'reason', 'status')
     can_delete = False
+    verbose_name = "ประวัติคำขอ"
+    verbose_name_plural = "ประวัติคำขอทั้งหมด"
+
 
 @admin.register(Employee)
 class EmployeeAdmin(admin.ModelAdmin):
-    list_display = ('employee_id', 'name', 'department', 'position', 'role')
+    list_display = ('employee_id', 'name', 'department', 'position', 'role', 'user') # Added 'user'
     list_filter = ('department', 'position', 'role')
-    search_fields = ('name', 'email', 'phone')
+    search_fields = ('name', 'email', 'phone', 'user__username') # Added search by username
     
-    # จัดกลุ่มฟิลด์ในหน้าแก้ไข
     fieldsets = (
         ('ข้อมูลส่วนตัว', {
             'fields': ('name', 'phone', 'email')
@@ -44,39 +47,50 @@ class EmployeeAdmin(admin.ModelAdmin):
         ('ข้อมูลการทำงาน', {
             'fields': ('department', 'position', 'role')
         }),
+        # Added section to easily link user accounts
+        ('บัญชีผู้ใช้ (สำหรับ Login)', {
+            'fields': ('user',)
+        }),
     )
     
-    # แสดงรายการคำขอของพนักงานคนนี้
-    inlines = [ComplainInline]
+    inlines = [LeaveRequestInline] # Use the updated inline class
 
 
-# 3. การตั้งค่าสำหรับโมเดลคำขอ (Complain)
+# 3. การตั้งค่าสำหรับโมเดล LeaveRequest (ปรับปรุง)
 # --------------------------------------------
-# Inlines: แสดงประวัติการอนุมัติในหน้า Complain
+# Inline: แสดงประวัติการอนุมัติในหน้า LeaveRequest
 class ApprovalHistoryInline(admin.TabularInline):
     model = ApprovalHistory
-    extra = 1
+    extra = 0
+    # Make all fields readonly as they are system-generated
+    readonly_fields = ('approver', 'approval_order', 'status', 'approval_date', 'approval_time', 'comment')
+    can_delete = False
 
-@admin.register(Complain)
-class ComplainAdmin(admin.ModelAdmin):
-    list_display = ('request_id', 'employee', 'request_date', 'status')
-    list_filter = ('status', 'request_date')
+
+@admin.register(LeaveRequest)
+class LeaveRequestAdmin(admin.ModelAdmin):
+    # *** CHANGED: Updated field names to match new model ***
+    list_display = ('request_id', 'employee', 'leave_date', 'leave_duration', 'status')
+    list_filter = ('status', 'leave_date', 'leave_duration')
     search_fields = ('employee__name', 'reason')
     
     fieldsets = (
         ('ข้อมูลคำขอ', {
-            'fields': ('employee', 'request_date', 'request_time', 'reason', 'attachment')
+            'fields': ('employee', 'leave_date', 'leave_duration', 'reason')
         }),
-        ('สถานะ', {
-            'fields': ('status',)
+        ('สถานะและการอนุมัติ', {
+            'fields': ('status', 'current_approver_role')
         }),
+        ('ข้อมูลระบบ', {
+            'fields': ('request_datetime',),
+        })
     )
     
-    # แสดงประวัติการอนุมัติของคำขอนี้
+    readonly_fields = ('request_datetime',)
     inlines = [ApprovalHistoryInline]
 
 
-# 4. การตั้งค่าสำหรับโมเดลประวัติ (Histories)
+# 4. การตั้งค่าสำหรับโมเดลประวัติ (ไม่มีการเปลี่ยนแปลง)
 # --------------------------------------------
 @admin.register(ApprovalHistory)
 class ApprovalHistoryAdmin(admin.ModelAdmin):
@@ -89,3 +103,4 @@ class InOutHistoryAdmin(admin.ModelAdmin):
     list_display = ('history_id', 'employee', 'time_in', 'time_out', 'guard')
     list_filter = ('time_in', 'time_out')
     search_fields = ('employee__name', 'guard__name')
+
