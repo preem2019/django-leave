@@ -12,7 +12,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 import os
-# --- ADD THIS IMPORT ---
+# เพิ่ม import สำหรับ messages framework
 from django.contrib.messages import constants as messages
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    # เพิ่มแอปพลิเคชัน 'app' ของเรา
     'app',
 ]
 
@@ -58,6 +59,7 @@ ROOT_URLCONF = 'leave.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        # เพิ่มการตั้งค่าให้ Django มองหา templates ใน root directory
         'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
@@ -106,9 +108,11 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+# ตั้งค่าภาษาหลักเป็นภาษาไทย
+LANGUAGE_CODE = 'th'
 
-TIME_ZONE = 'Asia/Bangkok' # Changed to Thailand Timezone
+# ตั้งค่าโซนเวลาเป็นของกรุงเทพฯ
+TIME_ZONE = 'Asia/Bangkok'
 
 USE_I18N = True
 
@@ -119,6 +123,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = 'static/'
+# STATICFILES_DIRS = [BASE_DIR / 'static'] # หากคุณมี static file ส่วนกลาง ให้ uncomment บรรทัดนี้
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
@@ -126,12 +131,23 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
-# --- ADD THIS ENTIRE BLOCK TO THE END OF THE FILE ---
-# Message Tags Configuration for Bootstrap 5
+# --- Custom Settings (การตั้งค่าที่เราเพิ่มเข้ามา) ---
+
+# 1. การตั้งค่า URL สำหรับระบบ Login
+# --------------------------------------------------
+LOGIN_URL = 'app:login'             # URL ที่จะ redirect ไปเมื่อผู้ใช้พยายามเข้าถึงหน้าที่ต้อง login ก่อน
+LOGIN_REDIRECT_URL = 'app:dashboard' # URL ที่จะ redirect ไปหลังจาก login สำเร็จ
+LOGOUT_REDIRECT_URL = 'app:login'    # URL ที่จะ redirect ไปหลังจาก logout สำเร็จ
+
+
+# 2. การตั้งค่าสีสำหรับการแจ้งเตือน (Messages Framework)
+# --------------------------------------------------
+# ทำให้ messages tag ของ Django ตรงกับ class ของ Bootstrap 5
 MESSAGE_TAGS = {
     messages.DEBUG: 'secondary',
     messages.INFO: 'info',
     messages.SUCCESS: 'success',
     messages.WARNING: 'warning',
-    messages.ERROR: 'danger', # This maps messages.error to the 'danger' tag
+    messages.ERROR: 'danger',
 }
+

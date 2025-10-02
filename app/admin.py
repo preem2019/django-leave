@@ -41,16 +41,17 @@ class EmployeeAdmin(admin.ModelAdmin):
     search_fields = ('name', 'email', 'phone', 'user__username') # Added search by username
     
     fieldsets = (
+        # Added section to easily link user accounts
+        ('บัญชีผู้ใช้ (สำหรับ Login)', {
+            'fields': ('user',)
+        }),
         ('ข้อมูลส่วนตัว', {
             'fields': ('name', 'phone', 'email')
         }),
         ('ข้อมูลการทำงาน', {
             'fields': ('department', 'position', 'role')
         }),
-        # Added section to easily link user accounts
-        ('บัญชีผู้ใช้ (สำหรับ Login)', {
-            'fields': ('user',)
-        }),
+        
     )
     
     inlines = [LeaveRequestInline] # Use the updated inline class

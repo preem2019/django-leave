@@ -1,9 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}
-  Dashboard - eLeave System
-{% endblock %}
+{% block title %}Dashboard - ระบบขออนุญาตฯ{% endblock %}
 
 {% block extra_css %}
   <style>
@@ -63,16 +61,12 @@
         <h2 class="h4 mb-0">Dashboard</h2>
         <small class="text-muted">ภาพรวมของระบบ</small>
       </div>
-       <a href="{% url 'app:create-request' %}" class="btn btn-primary">
-          <i class="fas fa-plus me-1"></i> สร้างคำขอใหม่
-      </a>
     </div>
 
     <!-- Dashboard Cards -->
     <div class="row">
       <!-- Pending Requests -->
       <div class="col-xl-3 col-md-6 mb-4">
-        <!-- *** LINK UPDATED HERE *** -->
         <a href="{% url 'app:requests-pending' %}" class="card dashboard-card bg-card-orange shadow-sm">
           <div class="card-body">
             <div class="icon-part">
@@ -88,7 +82,6 @@
 
       <!-- Approved Requests -->
       <div class="col-xl-3 col-md-6 mb-4">
-        <!-- *** LINK UPDATED HERE *** -->
         <a href="{% url 'app:requests-approved' %}" class="card dashboard-card bg-card-blue shadow-sm">
           <div class="card-body">
             <div class="icon-part">
@@ -104,7 +97,6 @@
 
       <!-- Rejected Requests -->
       <div class="col-xl-3 col-md-6 mb-4">
-        <!-- *** LINK UPDATED HERE *** -->
         <a href="{% url 'app:requests-rejected' %}" class="card dashboard-card bg-card-red shadow-sm">
           <div class="card-body">
             <div class="icon-part">
@@ -119,9 +111,9 @@
       </div>
 
       <!-- Members Card (For Admins/HR) -->
-      {% if is_approver_or_admin %}
+      {% if is_hr_or_admin %}
         <div class="col-xl-3 col-md-6 mb-4">
-          <a href="{% url 'admin:app_employee_changelist' %}" class="card dashboard-card bg-card-purple shadow-sm">
+          <a href="{% url 'app:employee-list' %}" class="card dashboard-card bg-card-purple shadow-sm">
             <div class="card-body">
               <div class="icon-part">
                 <i class="fas fa-users"></i>
@@ -151,3 +143,4 @@
 
   </div>
 {% endblock %}
+
