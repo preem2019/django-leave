@@ -6,31 +6,34 @@ from .forms import CustomAuthenticationForm
 app_name = 'app'
 
 urlpatterns = [
-    # Dashboard
+    # --- หน้าหลัก ---
     path('', views.dashboard, name='dashboard'),
 
-    # Leave Request URLs
+    # --- URL สำหรับการจัดการคำขอ (สำหรับพนักงาน) ---
     path('request/new/', views.create_leave_request, name='create-request'),
     path('requests/pending/', views.pending_requests_view, name='requests-pending'),
     path('requests/approved/', views.approved_requests_view, name='requests-approved'),
     path('requests/rejected/', views.rejected_requests_view, name='requests-rejected'),
-    path('request/provide-info/<int:request_id>/', views.provide_info_view, name='provide-info'),
+    path('request/<int:request_id>/provide-info/', views.provide_info_view, name='provide-info'),
 
-    # Approval URLs
+    # --- URL สำหรับผู้อนุมัติ ---
     path('approval-inbox/', views.approval_inbox, name='approval-inbox'),
     path('approval/process/<int:history_id>/', views.process_approval, name='process-approval'),
     
-    # Employee Management URLs
+    # --- URL สำหรับการจัดการพนักงาน (สำหรับ HR/Admin) ---
     path('users/', views.employee_list_view, name='employee-list'),
     path('user/create/', views.create_user_view, name='create-user'),
     path('user/edit/<int:employee_id>/', views.edit_employee_view, name='edit-employee'),
     path('user/delete/<int:employee_id>/', views.delete_employee_view, name='delete-employee'),
 
-    # Auth URLs
+    # --- URL สำหรับการยืนยันตัวตน (Login/Logout) ---
     path('login/', auth_views.LoginView.as_view(
         template_name='app/login.html', 
         authentication_form=CustomAuthenticationForm
     ), name='login'),
     path('logout/', auth_views.LogoutView.as_view(), name='logout'),
+
+    # --- URL สำหรับทดสอบอีเมล ---
+    path('test-email/<int:request_id>/', views.test_email_view, name='test-email'),
 ]
 

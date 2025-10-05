@@ -1,12 +1,16 @@
 from django.contrib import admin
 from django.urls import path, include
+# --- Import ที่เพิ่มเข้ามาใหม่ ---
+from django.conf import settings
+from django.conf.urls.static import static
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    
-    # Include all URLs from the 'app' application
-    # This makes the root of the website (e.g., http://127.0.0.1:8000/)
-    # start with the patterns from 'app.urls'
-    path('', include('app.urls')), 
+    path('', include('app.urls')),
 ]
+
+# --- การตั้งค่าที่เพิ่มเข้ามาใหม่ ---
+# เพิ่ม path สำหรับให้บริการไฟล์ media ในระหว่างการพัฒนา (development)
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 

@@ -51,10 +51,10 @@ class Employee(models.Model):
 
 class LeaveRequest(models.Model):
     STATUS_CHOICES = [
-        ('Pending', 'Pending'), 
-        ('Approved', 'Approved'), 
+        ('Pending', 'Pending'),
+        ('Approved', 'Approved'),
         ('Rejected', 'Rejected'),
-        ('Info Requested', 'รอข้อมูลเพิ่มเติม')
+        ('Info Requested', 'Info Requested'),
     ]
     DURATION_CHOICES = [('3 ชั่วโมง', '3 ชั่วโมง'), ('ครึ่งวัน', 'ครึ่งวัน'), ('เต็มวัน', 'เต็มวัน')]
     
@@ -70,6 +70,7 @@ class LeaveRequest(models.Model):
     current_approver_role = models.CharField(max_length=20, default='manager')
 
     info_request_comment = models.TextField(null=True, blank=True)
+    attachment = models.FileField(upload_to='attachments/', null=True, blank=True)
 
     def __str__(self):
         return f"Request ID: {self.request_id} by {self.employee.name}"

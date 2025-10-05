@@ -69,28 +69,29 @@
             <h3><i class="fas fa-file-alt me-2"></i>แบบฟอร์มขออนุญาตออกนอกสถานที่</h3>
         </div>
         <div class="card-body">
-            <form method="post" action="{% url 'app:create-request' %}">
+            <!-- ===== จุดที่แก้ไข: ลบ action ออกไป ===== -->
+            <form method="post" enctype="multipart/form-data">
                 {% csrf_token %}
 
-                <!-- Auto-filled User Info -->
+                <!-- ข้อมูลผู้ยื่นคำขอ (แสดงผลอัตโนมัติ) -->
                 <div class="row mb-3">
                     <div class="col-md-6">
                         <label class="form-label fw-bold">ผู้ยื่นคำขอ</label>
                         <div class="input-group">
-                             <span class="input-group-text"><i class="fas fa-user"></i></span>
-                             <input type="text" class="form-control" value="{{ request.user.employee.name }}" readonly>
+                            <span class="input-group-text"><i class="fas fa-user"></i></span>
+                            <input type="text" class="form-control" value="{{ request.user.employee.name }}" readonly>
                         </div>
                     </div>
                     <div class="col-md-6">
                         <label class="form-label fw-bold">แผนก</label>
-                         <div class="input-group">
-                             <span class="input-group-text"><i class="fas fa-building"></i></span>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-building"></i></span>
                             <input type="text" class="form-control" value="{{ request.user.employee.department }}" readonly>
                         </div>
                     </div>
                 </div>
 
-                <!-- *** NEW: Date and Duration Selection *** -->
+                <!-- วันที่และระยะเวลา -->
                 <div class="row mb-3">
                     <div class="col-md-6">
                         <label for="leave_date" class="form-label fw-bold">วันที่ออกนอกสถานที่</label>
@@ -105,24 +106,29 @@
                             <span class="input-group-text"><i class="fas fa-clock"></i></span>
                             <select name="leave_duration" id="leave_duration" class="form-select" required>
                                 <option selected disabled value="">-- เลือกระยะเวลา --</option>
-                                <option value="3_hours">3 ชั่วโมง</option>
-                                <option value="half_day">ครึ่งวัน</option>
-                                <option value="full_day">เต็มวัน</option>
+                                <option value="3 ชั่วโมง">3 ชั่วโมง</option>
+                                <option value="ครึ่งวัน">ครึ่งวัน</option>
+                                <option value="เต็มวัน">เต็มวัน</option>
                             </select>
                         </div>
                     </div>
                 </div>
 
-                <!-- Reason for Leaving -->
-                <label for="reason" class="form-label fw-bold">เหตุผลการออกนอกสถานที่</label>
-                <div class="input-group mb-4">
-                     <span class="input-group-text"><i class="fas fa-info-circle"></i></span>
+                <!-- เหตุผล -->
+                <div class="mb-3">
+                    <label for="reason" class="form-label fw-bold">เหตุผลการออกนอกสถานที่</label>
                     <textarea name="reason" id="reason" class="form-control" rows="4" placeholder="โปรดระบุเหตุผลให้ชัดเจน เช่น เดินทางไปพบลูกค้าบริษัท ABC เรื่อง..." required></textarea>
                 </div>
+                
+                <!-- แนบเอกสาร -->
+                <div class="mb-4">
+                    <label for="attachment" class="form-label fw-bold">แนบเอกสาร (ถ้ามี)</label>
+                    <input class="form-control" type="file" id="attachment" name="attachment">
+                </div>
 
-                <!-- Submit Button -->
+                <!-- ปุ่ม Submit -->
                 <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                     <a href="{% url 'app:dashboard' %}" class="btn btn-secondary">ยกเลิก</a>
+                    <a href="{% url 'app:dashboard' %}" class="btn btn-secondary">ยกเลิก</a>
                     <button type="submit" class="btn btn-submit text-white">
                         <i class="fas fa-paper-plane me-2"></i>ส่งคำขอ
                     </button>
@@ -135,13 +141,13 @@
 
 {% block extra_js %}
 <script>
-    // Set the default value of the date input to today
+    // ตั้งค่า default ของ date input ให้เป็นวันปัจจุบัน
     document.addEventListener('DOMContentLoaded', function() {
         const today = new Date().toISOString().split('T')[0];
         const dateInput = document.getElementById('leave_date');
         if(dateInput) {
             dateInput.value = today;
-            dateInput.min = today; // Prevent selecting past dates
+            dateInput.min = today; // ป้องกันการเลือกวันที่ในอดีต
         }
     });
 </script>
