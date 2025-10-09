@@ -55,10 +55,19 @@ WSGI_APPLICATION = 'leave.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'eleave_db',         # ชื่อฐานข้อมูล
+        'USER': 'root',               # ชื่อผู้ใช้ของ MySQL (ค่าเริ่มต้นมักจะเป็น 'root')
+        'PASSWORD': '',  # รหัสผ่านของ MySQL
+        'HOST': '127.0.0.1',          # หรือ 'localhost'
+        'PORT': '3306',               # Port มาตรฐานของ MySQL
+        'OPTIONS': {
+            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
+        },
     }
 }
+
+
 
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
@@ -105,3 +114,12 @@ DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 # ===== จุดที่แก้ไข: เพิ่มอีเมลสำหรับทดสอบ =====
 # เมื่อ DEBUG = True อีเมลทั้งหมดจะถูกส่งไปยังที่อยู่นี้แทน
 ADMIN_EMAIL = 'commusic66@gmail.com'
+# --- Line Messaging API Settings ---
+# ==============================================================================
+# วาง Channel Access Token ที่ได้จาก Line Developers Console ที่นี่
+LINE_CHANNEL_ACCESS_TOKEN = 'RaIJYRzSOTH4GOEK0CBQ8l192kqS+5U5+fGwcvBk8py35XAi6sdIktcZM5/C34jz/Od4TKw+xDVjd038bdVbpkxkVwD8Wk7PWpfCYk2SBLD42vyzr3fkDqx0S2FJQlelqrEZgq1Ac73kLJp91jSgagdB04t89/1O/w1cDnyilFU='
+
+# ID นี้จะใช้รับการแจ้งเตือนทั้งหมดเมื่อ DEBUG = True
+LINE_TEST_USER_ID = 'Uc533199e2c2c614aa8a1b2a566616b3e' 
+# -------------------------
+# --- Development/Testing Settings ---

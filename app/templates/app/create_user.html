@@ -145,6 +145,13 @@
                     <span class="input-group-text"><i class="fas fa-envelope"></i></span>
                     {{ form.email }}
                 </div>
+                {# --- ส่วนที่เพิ่มเข้ามา --- #}
+                <div class="mb-3">
+                    <label class="form-label">Line User ID</label>
+                    {{ form.line_user_id }}
+                    <small class="form-text text-muted">ใช้สำหรับส่งการแจ้งเตือนผ่าน Line</small>
+                </div>
+                {# ------------------------- #}
 
                 <div class="d-grid mt-4">
                     <button type="submit" class="btn btn-lg btn-create">

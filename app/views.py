@@ -5,7 +5,7 @@ from django.utils import timezone
 from django.db.models import Q
 from .models import LeaveRequest, Employee, ApprovalHistory
 from .forms import EmployeeCreationForm, EmployeeUpdateForm
-from .utils import send_notification_email
+from .utils import send_notification_email, send_notification_line
 
 # --- ฟังก์ชันสำหรับตรวจสอบสิทธิ์ ---
 def is_hr_or_admin(user):
@@ -71,20 +71,36 @@ def create_leave_request(request):
             attachment=request.FILES.get('attachment')
         )
 
-        # ดึงข้อมูลล่าสุดจากฐานข้อมูลเพื่อให้แน่ใจว่าข้อมูลครบถ้วนก่อนส่งอีเมล
         leave_request.refresh_from_db()
         
         try:
             manager = Employee.objects.get(department=employee.department, role__role_name__iexact='Manager')
             ApprovalHistory.objects.create(request=leave_request, approver=manager, approval_order=1, status='Pending')
             messages.success(request, 'ส่งคำขอสำเร็จ กำลังรอการอนุมัติจากผู้จัดการ')
-            # Send Email
+
             send_notification_email(
                 subject=f"คำขอใหม่ [{leave_request.request_id}] จากคุณ {employee.name}",
                 message_body=f"มีคำขอออกนอกสถานที่ใหม่จากคุณ {employee.name} รอการอนุมัติจากคุณ",
                 recipient=manager,
                 request_obj=leave_request
             )
+            
+            # --- Send Line ---
+            line_message = (
+                f"สวัสดีคุณ {manager.name}\n\n"
+                f"มีคำขอจากคุณ {leave_request.employee.name} รอการอนุมัติจากคุณ\n\n"
+                f"---\n"
+                f"รายละเอียดคำขอ:\n"
+                f"  รหัสคำขอ: {leave_request.request_id}\n"
+                f"  พนักงาน: {leave_request.employee.name}\n"
+                f"  วันที่: {leave_request.leave_date.strftime('%d/%m/%Y')}\n"
+                f"  ระยะเวลา: {leave_request.get_leave_duration_display()}\n"
+                f"  เหตุผล: {leave_request.reason}\n"
+                f"---"
+            )
+            send_notification_line(line_message, manager)
+            # -----------------
+
         except Employee.DoesNotExist:
             leave_request.status = 'Rejected'
             leave_request.reason += '\n[System: ไม่พบผู้จัดการในแผนกนี้]'
@@ -121,6 +137,13 @@ def provide_info_view(request, request_id):
                 recipient=history.approver,
                 request_obj=leave_request
             )
+            # --- Send Line ---
+            line_message = (
+                f"สวัสดีคุณ {history.approver.name}\n\n"
+                f"คุณ {leave_request.employee.name} ได้ให้ข้อมูลเพิ่มเติมสำหรับคำขอ [{leave_request.request_id}] แล้ว"
+            )
+            send_notification_line(line_message, history.approver)
+            # -----------------
 
         messages.success(request, f'ส่งข้อมูลเพิ่มเติมสำหรับคำขอ ID: {leave_request.request_id} เรียบร้อยแล้ว')
         return redirect('app:requests-pending')
@@ -182,13 +205,23 @@ def process_approval(request, history_id):
             leave_request.save()
             history.save()
             messages.info(request, f'ส่งคำขอข้อมูลเพิ่มเติมสำหรับ ID: {leave_request.request_id} กลับไปยังพนักงานแล้ว')
+            
             send_notification_email(
                 subject=f"ต้องการข้อมูลเพิ่มเติมสำหรับคำขอ [{leave_request.request_id}]",
                 message_body=f"ผู้อนุมัติของคุณต้องการข้อมูลเพิ่มเติมสำหรับคำขอของคุณ เหตุผล: {comment}",
                 recipient=leave_request.employee,
                 request_obj=leave_request
             )
-            return redirect('app:approval_inbox')
+            # --- Send Line ---
+            line_message = (
+                f"สวัสดีคุณ {leave_request.employee.name}\n\n"
+                f"ผู้อนุมัติต้องการข้อมูลเพิ่มเติมสำหรับคำขอ [{leave_request.request_id}]\n"
+                f"เหตุผล: {comment}"
+            )
+            send_notification_line(line_message, leave_request.employee)
+            # -----------------
+
+            return redirect('app:approval-inbox')
 
         history.comment = comment
         history.approval_date = timezone.now().date()
@@ -202,12 +235,28 @@ def process_approval(request, history_id):
                     leave_request.current_approver_role = 'supervisor'
                     ApprovalHistory.objects.create(request=leave_request, approver=supervisor, approval_order=2, status='Pending')
                     messages.success(request, f'อนุมัติคำขอ ID: {leave_request.request_id} สำเร็จ ส่งต่อไปยัง Supervisor')
+                    
                     send_notification_email(
                         subject=f"คำขอ [{leave_request.request_id}] รอการอนุมัติจากคุณ",
                         message_body=f"มีคำขอจากคุณ {leave_request.employee.name} รอการอนุมัติจากคุณ",
                         recipient=supervisor,
                         request_obj=leave_request
                     )
+                    # --- Send Line ---
+                    line_message = (
+                        f"สวัสดีคุณ {supervisor.name}\n\n"
+                        f"มีคำขอจากคุณ {leave_request.employee.name} รอการอนุมัติจากคุณ\n\n"
+                        f"---\n"
+                        f"รายละเอียดคำขอ:\n"
+                        f"  รหัสคำขอ: {leave_request.request_id}\n"
+                        f"  พนักงาน: {leave_request.employee.name}\n"
+                        f"  วันที่: {leave_request.leave_date.strftime('%d/%m/%Y')}\n"
+                        f"  ระยะเวลา: {leave_request.get_leave_duration_display()}\n"
+                        f"  เหตุผล: {leave_request.reason}\n"
+                        f"---"
+                    )
+                    send_notification_line(line_message, supervisor)
+                    # -----------------
                 except Employee.DoesNotExist:
                      leave_request.status = 'Rejected'
                      leave_request.current_approver_role = 'completed'
@@ -217,6 +266,7 @@ def process_approval(request, history_id):
                 hr_and_safety = Employee.objects.filter(Q(role__role_name__iexact='hr') | Q(role__role_name__iexact='safety'))
                 if hr_and_safety.exists():
                     leave_request.current_approver_role = 'hr_safety'
+                    messages.success(request, f'อนุมัติคำขอ ID: {leave_request.request_id} สำเร็จ ส่งต่อไปยัง HR/Safety')
                     for approver in hr_and_safety:
                         ApprovalHistory.objects.create(request=leave_request, approver=approver, approval_order=3, status='Pending')
                         send_notification_email(
@@ -225,7 +275,21 @@ def process_approval(request, history_id):
                             recipient=approver,
                             request_obj=leave_request
                         )
-                    messages.success(request, f'อนุมัติคำขอ ID: {leave_request.request_id} สำเร็จ ส่งต่อไปยัง HR/Safety')
+                        # --- Send Line ---
+                        line_message = (
+                            f"สวัสดีคุณ {approver.name}\n\n"
+                            f"มีคำขอจากคุณ {leave_request.employee.name} รอการอนุมัติจากแผนกของท่าน\n\n"
+                            f"---\n"
+                            f"รายละเอียดคำขอ:\n"
+                            f"  รหัสคำขอ: {leave_request.request_id}\n"
+                            f"  พนักงาน: {leave_request.employee.name}\n"
+                            f"  วันที่: {leave_request.leave_date.strftime('%d/%m/%Y')}\n"
+                            f"  ระยะเวลา: {leave_request.get_leave_duration_display()}\n"
+                            f"  เหตุผล: {leave_request.reason}\n"
+                            f"---"
+                        )
+                        send_notification_line(line_message, approver)
+                        # -----------------
                 else:
                     leave_request.status = 'Rejected'
                     leave_request.current_approver_role = 'completed'
@@ -242,6 +306,19 @@ def process_approval(request, history_id):
                     recipient=leave_request.employee,
                     request_obj=leave_request
                 )
+                # --- Send Line ---
+                line_message = (
+                    f"สวัสดีคุณ {leave_request.employee.name}\n\n"
+                    f"ยินดีด้วย! คำขอออกนอกสถานที่ของคุณได้รับการอนุมัติแล้ว\n\n"
+                    f"---\n"
+                    f"รายละเอียดคำขอ:\n"
+                    f"  รหัสคำขอ: {leave_request.request_id}\n"
+                    f"  วันที่: {leave_request.leave_date.strftime('%d/%m/%Y')}\n"
+                    f"  ระยะเวลา: {leave_request.get_leave_duration_display()}\n"
+                    f"---"
+                )
+                send_notification_line(line_message, leave_request.employee)
+                # -----------------
         
         elif decision == 'reject':
             history.status = 'Rejected'
@@ -254,10 +331,23 @@ def process_approval(request, history_id):
                 recipient=leave_request.employee,
                 request_obj=leave_request
             )
+            # --- Send Line ---
+            line_message = (
+                f"สวัสดีคุณ {leave_request.employee.name}\n\n"
+                f"คำขอออกนอกสถานที่ของคุณถูกปฏิเสธ\n\n"
+                f"---\n"
+                f"รายละเอียดคำขอ:\n"
+                f"  รหัสคำขอ: {leave_request.request_id}\n"
+                f"  ผู้ปฏิเสธ: คุณ {history.approver.name}\n"
+                f"  เหตุผล: {comment if comment else 'ไม่ได้ระบุ'}\n"
+                f"---"
+            )
+            send_notification_line(line_message, leave_request.employee)
+            # -----------------
 
         leave_request.save()
         history.save()
-    return redirect('app:approval_inbox')
+    return redirect('app:approval-inbox')
 
 # --- ส่วนของการจัดการพนักงาน (HR/Admin) ---
 
@@ -329,4 +419,3 @@ def test_email_view(request, request_id):
         'request_obj': leave_request
     }
     return render(request, 'app/test_email.html', context)
-

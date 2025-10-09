@@ -38,6 +38,7 @@ class Employee(models.Model):
     name = models.CharField(max_length=255)
     phone = models.CharField(max_length=32, null=True, blank=True)
     email = models.CharField(max_length=255, null=True, blank=True)
+    line_user_id = models.CharField(max_length=255, null=True, blank=True) # สำหรับเก็บ Line User ID
     department = models.ForeignKey(Department, on_delete=models.CASCADE, db_column='department_id')
     position = models.ForeignKey(Position, on_delete=models.CASCADE, db_column='position_id')
     role = models.ForeignKey(Role, on_delete=models.CASCADE, db_column='role_id')

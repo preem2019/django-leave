@@ -20,7 +20,7 @@ class EmployeeCreationForm(forms.ModelForm):
 
     class Meta:
         model = Employee
-        fields = ['phone', 'email'] 
+        fields = ['phone', 'email','line_user_id'] 
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -61,7 +61,7 @@ class EmployeeUpdateForm(forms.ModelForm):
 
     class Meta:
         model = Employee
-        fields = ['phone', 'email', 'department', 'position', 'role']
+        fields = ['phone', 'email', 'department', 'position', 'role', 'line_user_id']
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
