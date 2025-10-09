@@ -50,6 +50,19 @@
         display: flex;
         justify-content: center;
     }
+    conditions-box {
+    background-color: #f8f9fa; /* สีเทาอ่อน */
+    padding: 1rem;
+    border-radius: 0.375rem; /* ทำให้ขอบมน */
+    border: 1px solid #e9ecef;
+    margin-bottom: 1.5rem; /* ระยะห่างจากฟอร์มด้านล่าง */
+}
+
+.conditions-box p {
+    margin-bottom: 0; /* เอา margin ของ paragraph ออก */
+    font-size: 1rem;
+    line-height: 1.6;
+}
 </style>
 {% endblock %}
 
@@ -68,6 +81,14 @@
         <div class="card-header">
             <h3><i class="fas fa-file-alt me-2"></i>แบบฟอร์มขออนุญาตออกนอกสถานที่</h3>
         </div>
+        <div class="card-body">
+            <div class="conditions-box">
+                <h6 class="mb-2"><strong><i class="fas fa-info-circle me-1"></i>เงื่อนไขการลา</strong></h6>
+                <p>
+                    พนักงานที่ประสงค์จะขออนุญาตออกไปภายนอกบริษัท จะต้องกรอกข้อมูลการลาในระบบ และยื่นขออนุญาตเป็นการล่วงหน้าต่อผู้บังคับบัญชาตามลำดับชั้น และจะออกได้ก็ต่อเมื่อผู้บังคับบัญชาได้อนุมัติการลาแล้วเท่านั้น
+                </p>
+            </div>
+            
         <div class="card-body">
             <!-- ===== จุดที่แก้ไข: ลบ action ออกไป ===== -->
             <form method="post" enctype="multipart/form-data">

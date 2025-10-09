@@ -3,7 +3,11 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
 from django.utils import timezone
 from django.db.models import Q
-from .models import LeaveRequest, Employee, ApprovalHistory
+from datetime import date
+from django.http import HttpResponse
+import openpyxl
+
+from .models import LeaveRequest, Employee, ApprovalHistory, InOutHistory
 from .forms import EmployeeCreationForm, EmployeeUpdateForm
 from .utils import send_notification_email, send_notification_line
 
@@ -14,11 +18,16 @@ def is_hr_or_admin(user):
         return user.is_superuser
     return user.employee.role.role_name.lower() in ['hr', 'admin']
 
-# --- ฟังก์ชันตรวจสอบ Superuser สำหรับหน้าทดสอบ ---
+def is_security(user):
+    """ตรวจสอบว่าผู้ใช้เป็น Security หรือไม่"""
+    if not hasattr(user, 'employee'):
+        return False
+    return user.employee.role.role_name.lower() == 'security'
+
 def is_superuser(user):
     return user.is_superuser
 
-# --- หน้าหลัก / Dashboard ---
+# --- หน้าหลัก / Dashboard (อัปเดต) ---
 @login_required
 def dashboard(request):
     """
@@ -43,8 +52,9 @@ def dashboard(request):
         'approved_requests_count': my_requests.filter(status='Approved').count(),
         'rejected_requests_count': my_requests.filter(status='Rejected').count(),
         'total_employees_count': Employee.objects.count(),
-        'is_approver_or_admin': is_approver or request.user.is_superuser,
+        'is_approver_or_admin': is_approver or is_hr_or_admin(request.user),
         'is_hr_or_admin': is_hr_or_admin(request.user),
+        'is_security': is_security(request.user), # เพิ่ม context สำหรับ security
         'approval_inbox_count': pending_my_approval.count(),
     }
     return render(request, 'app/dashboard.html', context)
@@ -206,9 +216,10 @@ def process_approval(request, history_id):
             history.save()
             messages.info(request, f'ส่งคำขอข้อมูลเพิ่มเติมสำหรับ ID: {leave_request.request_id} กลับไปยังพนักงานแล้ว')
             
+            email_message_body = f"ผู้อนุมัติของคุณต้องการข้อมูลเพิ่มเติมสำหรับคำขอของคุณ เหตุผล: {comment}"
             send_notification_email(
                 subject=f"ต้องการข้อมูลเพิ่มเติมสำหรับคำขอ [{leave_request.request_id}]",
-                message_body=f"ผู้อนุมัติของคุณต้องการข้อมูลเพิ่มเติมสำหรับคำขอของคุณ เหตุผล: {comment}",
+                message_body=email_message_body,
                 recipient=leave_request.employee,
                 request_obj=leave_request
             )
@@ -236,9 +247,10 @@ def process_approval(request, history_id):
                     ApprovalHistory.objects.create(request=leave_request, approver=supervisor, approval_order=2, status='Pending')
                     messages.success(request, f'อนุมัติคำขอ ID: {leave_request.request_id} สำเร็จ ส่งต่อไปยัง Supervisor')
                     
+                    email_message_body = f"มีคำขอจากคุณ {leave_request.employee.name} รอการอนุมัติจากคุณ"
                     send_notification_email(
                         subject=f"คำขอ [{leave_request.request_id}] รอการอนุมัติจากคุณ",
-                        message_body=f"มีคำขอจากคุณ {leave_request.employee.name} รอการอนุมัติจากคุณ",
+                        message_body=email_message_body,
                         recipient=supervisor,
                         request_obj=leave_request
                     )
@@ -269,9 +281,10 @@ def process_approval(request, history_id):
                     messages.success(request, f'อนุมัติคำขอ ID: {leave_request.request_id} สำเร็จ ส่งต่อไปยัง HR/Safety')
                     for approver in hr_and_safety:
                         ApprovalHistory.objects.create(request=leave_request, approver=approver, approval_order=3, status='Pending')
+                        email_message_body=f"มีคำขอจากคุณ {leave_request.employee.name} รอการอนุมัติจากแผนกของท่าน"
                         send_notification_email(
                             subject=f"คำขอ [{leave_request.request_id}] รอการอนุมัติจาก HR/Safety",
-                            message_body=f"มีคำขอจากคุณ {leave_request.employee.name} รอการอนุมัติจากแผนกของท่าน",
+                            message_body=email_message_body,
                             recipient=approver,
                             request_obj=leave_request
                         )
@@ -325,9 +338,10 @@ def process_approval(request, history_id):
             leave_request.status = 'Rejected'
             leave_request.current_approver_role = 'completed'
             messages.warning(request, f'คุณได้ปฏิเสธคำขอ ID: {leave_request.request_id}')
+            email_message_body = f"คำขอออกนอกสถานที่ของคุณถูกปฏิเสธโดยผู้อนุมัติ เหตุผล: {comment}"
             send_notification_email(
                 subject=f"คำขอ [{leave_request.request_id}] ของคุณถูกปฏิเสธ",
-                message_body=f"คำขอออกนอกสถานที่ของคุณถูกปฏิเสธโดยผู้อนุมัติ เหตุผล: {comment}",
+                message_body=email_message_body,
                 recipient=leave_request.employee,
                 request_obj=leave_request
             )
@@ -348,6 +362,116 @@ def process_approval(request, history_id):
         leave_request.save()
         history.save()
     return redirect('app:approval-inbox')
+
+# --- ส่วนของ รปภ. (Security Guard) ---
+@login_required
+@user_passes_test(is_security, login_url='/')
+def security_dashboard(request):
+    today = date.today()
+    recorded_request_ids = InOutHistory.objects.values_list('request_id', flat=True)
+    ready_to_leave_requests = LeaveRequest.objects.filter(
+        leave_date=today, status='Approved'
+    ).exclude(request_id__in=recorded_request_ids).order_by('employee__name')
+    already_out_list = InOutHistory.objects.filter(
+        request__leave_date=today, status='OUT'
+    ).order_by('time_out')
+    context = {
+        'ready_to_leave_requests': ready_to_leave_requests,
+        'already_out_list': already_out_list,
+        'today_date': today,
+        'is_security': True
+    }
+    return render(request, 'app/security_dashboard.html', context)
+
+@login_required
+@user_passes_test(is_security, login_url='/')
+def record_time_out(request, request_id):
+    if request.method == 'POST':
+        leave_request = get_object_or_404(LeaveRequest, request_id=request_id)
+        InOutHistory.objects.create(
+            request=leave_request,
+            employee=leave_request.employee,
+            guard=request.user.employee,
+            time_out=timezone.now(),
+            status='OUT'
+        )
+        messages.success(request, f'บันทึกเวลาออกสำหรับคุณ "{leave_request.employee.name}" เรียบร้อยแล้ว')
+    return redirect('app:security-dashboard')
+
+@login_required
+@user_passes_test(is_security, login_url='/')
+def record_time_in(request, history_id):
+    if request.method == 'POST':
+        history = get_object_or_404(InOutHistory, history_id=history_id)
+        history.time_in = timezone.now()
+        history.status = 'COMPLETED'
+        history.save()
+        messages.success(request, f'บันทึกเวลากลับเข้าสำหรับคุณ "{history.employee.name}" เรียบร้อยแล้ว')
+    return redirect('app:security-dashboard')
+
+
+# --- ส่วนของรายงาน (HR/Admin) ---
+@login_required
+@user_passes_test(is_hr_or_admin, login_url='/')
+def in_out_history_report(request):
+    history_list = InOutHistory.objects.all().order_by('-time_out')
+    search_query = request.GET.get('search_query', '')
+    start_date = request.GET.get('start_date', '')
+    end_date = request.GET.get('end_date', '')
+    if search_query:
+        history_list = history_list.filter(employee__name__icontains=search_query)
+    if start_date:
+        history_list = history_list.filter(time_out__date__gte=start_date)
+    if end_date:
+        history_list = history_list.filter(time_out__date__lte=end_date)
+    context = {
+        'history_list': history_list,
+        'search_query': search_query,
+        'start_date': start_date,
+        'end_date': end_date,
+        'is_hr_or_admin': True,
+    }
+    return render(request, 'app/in_out_history_report.html', context)
+
+@login_required
+@user_passes_test(is_hr_or_admin, login_url='/')
+def export_in_out_history_excel(request):
+    history_list = InOutHistory.objects.all().order_by('-time_out')
+    search_query = request.GET.get('search_query', '')
+    start_date = request.GET.get('start_date', '')
+    end_date = request.GET.get('end_date', '')
+
+    if search_query:
+        history_list = history_list.filter(employee__name__icontains=search_query)
+    if start_date:
+        history_list = history_list.filter(time_out__date__gte=start_date)
+    if end_date:
+        history_list = history_list.filter(time_out__date__lte=end_date)
+    
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "InOut History Report"
+
+    headers = ["ชื่อพนักงาน", "แผนก", "วันที่", "เวลาออก", "เวลากลับ", "ผู้บันทึก (รปภ.)"]
+    ws.append(headers)
+
+    for history in history_list:
+        time_in_str = history.time_in.strftime("%H:%M:%S") if history.time_in else "ยังไม่กลับ"
+        row = [
+            history.employee.name,
+            history.employee.department.department_name,
+            history.time_out.strftime("%d/%m/%Y"),
+            history.time_out.strftime("%H:%M:%S"),
+            time_in_str,
+            history.guard.name,
+        ]
+        ws.append(row)
+
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = 'attachment; filename="in_out_history_report.xlsx"'
+    wb.save(response)
+    return response
+
 
 # --- ส่วนของการจัดการพนักงาน (HR/Admin) ---
 
@@ -419,3 +543,4 @@ def test_email_view(request, request_id):
         'request_obj': leave_request
     }
     return render(request, 'app/test_email.html', context)
+

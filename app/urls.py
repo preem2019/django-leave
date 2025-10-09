@@ -20,6 +20,17 @@ urlpatterns = [
     path('approval-inbox/', views.approval_inbox, name='approval-inbox'),
     path('approval/process/<int:history_id>/', views.process_approval, name='process-approval'),
     
+    # --- URL สำหรับ รปภ. ---
+    path('security/dashboard/', views.security_dashboard, name='security-dashboard'),
+    path('security/record-out/<int:request_id>/', views.record_time_out, name='record-time-out'),
+    path('security/record-in/<int:history_id>/', views.record_time_in, name='record-time-in'),
+
+    # --- URL สำหรับรายงาน (HR/Admin) ---
+    path('reports/in-out-history/', views.in_out_history_report, name='in-out-history-report'),
+    # --- START: บรรทัดที่เพิ่มเข้ามาเพื่อแก้ Error ---
+    path('reports/in-out-history/export/', views.export_in_out_history_excel, name='export-in-out-history-excel'),
+    # --- END ---
+
     # --- URL สำหรับการจัดการพนักงาน (สำหรับ HR/Admin) ---
     path('users/', views.employee_list_view, name='employee-list'),
     path('user/create/', views.create_user_view, name='create-user'),

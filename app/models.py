@@ -38,7 +38,7 @@ class Employee(models.Model):
     name = models.CharField(max_length=255)
     phone = models.CharField(max_length=32, null=True, blank=True)
     email = models.CharField(max_length=255, null=True, blank=True)
-    line_user_id = models.CharField(max_length=255, null=True, blank=True) # สำหรับเก็บ Line User ID
+    line_user_id = models.CharField(max_length=255, null=True, blank=True)
     department = models.ForeignKey(Department, on_delete=models.CASCADE, db_column='department_id')
     position = models.ForeignKey(Position, on_delete=models.CASCADE, db_column='position_id')
     role = models.ForeignKey(Role, on_delete=models.CASCADE, db_column='role_id')
@@ -77,7 +77,6 @@ class LeaveRequest(models.Model):
         return f"Request ID: {self.request_id} by {self.employee.name}"
 
     def get_detailed_status(self):
-        """คืนค่าข้อความสถานะแบบละเอียดและสีสำหรับ Badge"""
         if self.status == 'Approved':
             return {'text': 'อนุมัติแล้ว', 'color': 'success'}
         if self.status == 'Rejected':
@@ -97,7 +96,6 @@ class LeaveRequest(models.Model):
 
     @property
     def ordered_approval_history(self):
-        """ดึงข้อมูลประวัติการอนุมัติที่จัดเรียงลำดับอย่างถูกต้อง"""
         return self.approvalhistory_set.order_by('approval_order', 'approval_date')
 
 class ApprovalHistory(models.Model):
@@ -115,10 +113,15 @@ class ApprovalHistory(models.Model):
         return f"History for Request ID: {self.request.request_id}"
 
 # ==============================================================================
-# 4. (Optional) In-Out History Model
+# 4. In-Out History Model (Updated)
 # ==============================================================================
 
 class InOutHistory(models.Model):
+    STATUS_CHOICES = [
+        ('OUT', 'อยู่ข้างนอก'), 
+        ('COMPLETED', 'กลับมาแล้ว')
+    ]
+
     history_id = models.AutoField(primary_key=True)
     request = models.ForeignKey(LeaveRequest, on_delete=models.CASCADE, db_column='request_id')
     employee = models.ForeignKey(Employee, on_delete=models.CASCADE, related_name='in_out_histories')
@@ -132,6 +135,8 @@ class InOutHistory(models.Model):
         db_column='guard_id',
         limit_choices_to={'role__role_name__iexact': 'security'} 
     )
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='OUT', null=True)
+
 
     def __str__(self):
         return f"InOut for {self.employee.name} on request {self.request.request_id}"
