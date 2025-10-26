@@ -1,0 +1,140 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}ประวัติคำขอ: {{ status_title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .table-hover tbody tr:hover { background-color: #f1f9ff; cursor: pointer; }
+    .timeline { list-style: none; padding: 0; margin-top: 1rem; }
+    .timeline-item { display: flex; gap: 1rem; margin-bottom: 1.25rem; }
+    .timeline-icon { flex-shrink: 0; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.2rem; }
+    .timeline-content { padding-top: 5px; }
+    .timeline-content blockquote { font-size: 0.9rem; background-color: #f8f9fa; border-left: 5px solid #e9ecef; padding: 0.5rem 1rem; margin-top: 0.5rem; margin-left: 0; }
+    .modal-body ul { padding-left: 20px; }
+</style>
+{% endblock %}
+
+{% block breadcrumb %}
+  <a href="{% url 'app:dashboard' %}" class="text-decoration-none text-secondary">Dashboard</a>
+  <span class="mx-2">/</span>
+  <span class="text-dark">ประวัติคำขอ ({{ status_title }})</span>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="h4 mb-0"><i class="fas fa-history me-2"></i>ประวัติคำขอ: {{ status_title }}</h2>
+            <small class="text-muted">รายการคำขอทั้งหมดของคุณที่อยู่ในสถานะ "{{ status_title }}"</small>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light text-center">
+                        <tr>
+                            <th>รหัสคำขอ</th>
+                            <th>วันที่ขออนุญาต</th>
+                            <th>ระยะเวลา</th>
+                            <th class="text-start">เหตุผล</th>
+                            <th>สถานะ</th>
+                            <th>วันที่ยื่นเรื่อง</th> 
+                        </tr>
+                    </thead>
+                    <tbody class="text-center">
+                        {% for request in requests %}
+                        <tr data-bs-toggle="modal" data-bs-target="#detailModal-{{ request.request_id }}">
+                            <td>{{ request.request_id }}</td>
+                            <td>{{ request.leave_date|date:"d/m/Y" }}</td>
+                            <td>{{ request.get_leave_duration_display }}</td>
+                            <td class="text-start">{{ request.reason|truncatewords:15 }}</td>
+                            <td>
+                                {% with detailed_status=request.get_detailed_status %}
+                                    <span class="badge bg-{{ detailed_status.color }} {% if detailed_status.color == 'warning' or detailed_status.color == 'info' %}text-dark{% endif %}">
+                                        {{ detailed_status.text }}
+                                    </span>
+                                {% endwith %}
+                            </td>
+                            <td>{{ request.request_datetime|date:"d/m/Y H:i" }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="6" class="text-center p-5"><p class="text-muted">ไม่พบรายการคำขอ</p></td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modals for Request Details -->
+{% for request in requests %}
+<div class="modal fade" id="detailModal-{{ request.request_id }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-file-invoice me-2"></i>รายละเอียดคำขอ #{{ request.request_id }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- ===== จุดที่แก้ไข: เพิ่ม Alert สำหรับสถานะ "รอข้อมูลเพิ่มเติม" ===== -->
+                {% if request.status == 'Info Requested' %}
+                <div class="alert alert-info">
+                    <h5 class="alert-heading">ผู้อนุมัติขอข้อมูลเพิ่มเติม:</h5>
+                    <p>{{ request.info_request_comment|linebreaksbr }}</p>
+                    <hr>
+                    <a href="{% url 'app:provide-info' request.request_id %}" class="btn btn-primary">
+                        <i class="fas fa-edit me-2"></i>ไปที่หน้าให้ข้อมูลเพิ่มเติม
+                    </a>
+                </div>
+                {% endif %}
+
+                <h6>ข้อมูลคำขอ:</h6>
+                <ul>
+                    <li><strong>ผู้ยื่นคำขอ:</strong> {{ request.employee.name }}</li>
+                    <li><strong>วันที่ขออนุญาต:</strong> {{ request.leave_date|date:"d F Y" }} ({{ request.get_leave_duration_display }})</li>
+                    <li><strong>เหตุผล:</strong> {{ request.reason|linebreaksbr }}</li>
+                    <!-- ===== จุดที่แก้ไข: เพิ่มลิงก์สำหรับดูเอกสารแนบ ===== -->
+                    {% if request.attachment %}
+                    <li><strong>เอกสารแนบ:</strong> <a href="{{ request.attachment.url }}" target="_blank" class="btn btn-sm btn-outline-primary"><i class="fas fa-paperclip me-1"></i> ดูเอกสาร</a></li>
+                    {% endif %}
+                </ul>
+                <hr>
+                <h6 class="mt-3">ประวัติการอนุมัติ:</h6>
+                <ul class="timeline">
+                    {% for history in request.ordered_approval_history %}
+                        <li class="timeline-item">
+                            {% if history.status == 'Approved' %}
+                                <div class="timeline-icon bg-success"><i class="fas fa-check"></i></div>
+                            {% elif history.status == 'Rejected' %}
+                                <div class="timeline-icon bg-danger"><i class="fas fa-times"></i></div>
+                            {% else %}
+                                <div class="timeline-icon bg-secondary"><i class="fas fa-hourglass-half"></i></div>
+                            {% endif %}
+                            <div class="timeline-content">
+                                <strong>{{ history.approver.name }}</strong> ({{ history.approver.role.role_name|capfirst }})
+                                {% if history.status == 'Approved' %}<span class="text-success fw-bold">อนุมัติ</span>
+                                {% elif history.status == 'Rejected' %}<span class="text-danger fw-bold">ปฏิเสธ</span>
+                                {% else %}<span class="text-muted">รอดำเนินการ</span>{% endif %}
+                                <small class="text-muted">{% if history.approval_date %} - {{ history.approval_date|date:"d/m/Y" }} {{ history.approval_time|date:"H:i" }}{% endif %}</small>
+                                {% if history.comment %}<blockquote>{{ history.comment|linebreaksbr }}</blockquote>{% endif %}
+                            </div>
+                        </li>
+                    {% empty %}
+                        <p class="text-muted">ยังไม่มีประวัติการอนุมัติ</p>
+                    {% endfor %}
+                </ul>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ปิด</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+{% endblock %}
+
