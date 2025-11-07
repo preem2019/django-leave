@@ -1,0 +1,101 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}จุดตรวจสอบ รปภ.{% endblock %}
+
+{% block breadcrumb %}
+  <a href="{% url 'app:dashboard' %}" class="text-decoration-none text-secondary">Dashboard</a>
+  <span class="mx-2">/</span>
+  <span class="text-dark">จุดตรวจสอบ รปภ.</span>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="h4 mb-0"><i class="fas fa-shield-alt me-2"></i>แดชบอร์ดบันทึกเวลา (สำหรับ รปภ.)</h2>
+            <small class="text-muted">วันที่: {{ today_date|date:"d F Y" }}</small>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-header text-white" style="background-color: {{ site_config.color_primary|default:'#3498db' }};">
+        <h5 class="mb-0"><i class="fas fa-sign-out-alt me-2"></i>รายการพนักงานที่พร้อมออกนอกสถานที่</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light text-center">
+                        <tr>
+                            <th>รหัสคำขอ</th>
+                            <th class="text-start">ชื่อพนักงาน</th>
+                            <th>แผนก</th>
+                            <th>ระยะเวลา</th>
+                            <th>จัดการ</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-center">
+                        {% for request in ready_to_leave_requests %}
+                        <tr>
+                            <td>#{{ request.request_id }}</td>
+                            <td class="text-start fw-bold">{{ request.employee.name }}</td>
+                            <td>{{ request.employee.department.department_name }}</td>
+                            <td><span class="badge bg-secondary">{{ request.get_leave_duration_display }}</span></td>
+                            <td>
+                                <form action="{% url 'app:record-time-out' request.request_id %}" method="post" class="d-inline">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-primary btn-sm">
+                                        <i class="fas fa-play-circle me-1"></i> บันทึกเวลาออก
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="5" class="text-center p-4 text-muted">ไม่มีรายการที่พร้อมออกในขณะนี้</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-header text-white" style="background-color: {{ site_config.color_success|default:'#198754' }};">
+        <h5 class="mb-0"><i class="fas fa-sign-in-alt me-2"></i>รายการพนักงานที่ออกไปแล้ว (รอการกลับเข้า)</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light text-center">
+                        <tr>
+                            <th>รหัสคำขอ</th>
+                            <th class="text-start">ชื่อพนักงาน</th>
+                            <th>เวลาที่ออกไป</th>
+                            <th>จัดการ</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-center">
+                        {% for history in already_out_list %}
+                        <tr>
+                            <td>#{{ history.request.request_id }}</td>
+                            <td class="text-start fw-bold">{{ history.employee.name }}</td>
+                            <td>{{ history.time_out|date:"H:i:s" }} น.</td>
+                            <td>
+                                <form action="{% url 'app:record-time-in' history.history_id %}" method="post" class="d-inline">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-success btn-sm">
+                                        <i class="fas fa-check-circle me-1"></i> บันทึกเวลากลับเข้า
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="4" class="text-center p-4 text-muted">ไม่มีพนักงานที่อยู่ข้างนอกในขณะนี้</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

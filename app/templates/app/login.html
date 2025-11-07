@@ -1,0 +1,102 @@
+{% extends 'app/base_simple.html' %}
+{% load static %}
+
+{% block title %}Login - ระบบขออนุญาต{% endblock %}
+
+{% block extra_css %}
+<style>
+    .main-content {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-grow: 1;
+        padding-top: 40px;
+        padding-bottom: 40px;
+        background-color: #f5f5f5;
+    }
+    .login-container {
+        max-width: 450px;
+        width: 100%;
+    }
+    .login-card {
+        border-radius: 0.75rem;
+        border: none;
+    }
+    .login-card .card-header {
+        /* ===== START: แก้ไข ===== */
+        background-color: {{ site_config.color_primary|default:'#3498db' }};
+        /* ===== END: แก้ไข ===== */
+        color: white;
+        border-top-left-radius: 0.75rem;
+        border-top-right-radius: 0.75rem;
+        padding: 1.5rem;
+        text-align: center;
+    }
+    .login-card .card-body {
+        padding: 2rem;
+    }
+    .form-control:focus {
+        /* ===== START: แก้ไข ===== */
+        box-shadow: 0 0 0 0.25rem {{ site_config.color_primary|default:'#3498db' }}40; /* 40 = 25% opacity */
+        border-color: {{ site_config.color_primary|default:'#3498db' }};
+        /* ===== END: แก้ไข ===== */
+    }
+    .btn-login {
+        /* ===== START: แก้ไข ===== */
+        background-color: {{ site_config.color_primary|default:'#3498db' }};
+        border-color: {{ site_config.color_primary|default:'#3498db' }};
+        /* ===== END: แก้ไข ===== */
+        font-weight: 600;
+        padding: 0.75rem;
+    }
+    .btn-login:hover {
+        /* ===== START: แก้ไข (เปลี่ยนวิธี hover) ===== */
+        background-color: {{ site_config.color_primary|default:'#2980b9' }};
+        border-color: {{ site_config.color_primary|default:'#2980b9' }};
+        filter: brightness(90%);
+        /* ===== END: แก้ไข ===== */
+    }
+    .input-group-text {
+        background-color: #e9ecef;
+        border: 1px solid #ced4da;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="login-container">
+    <div class="card login-card shadow-lg">
+        <div class="card-header">
+            <h3><i class="fas fa-sign-in-alt me-2"></i>เข้าสู่ระบบ</h3>
+        </div>
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger text-center" role="alert">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        {% for error in form.non_field_errors %}
+                            {{ error }}
+                        {% endfor %}
+                    </div>
+                {% endif %}
+
+                <div class="input-group mb-3">
+                    <span class="input-group-text"><i class="fas fa-user"></i></span>
+                    {{ form.username }}
+                </div>
+
+                <div class="input-group mb-4">
+                    <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                    {{ form.password }}
+                </div>
+
+                <div class="d-grid">
+                    <button type="submit" class="btn btn-primary btn-lg btn-login">เข้าสู่ระบบ</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

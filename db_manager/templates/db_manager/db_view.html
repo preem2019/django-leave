@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+
+{% block title %}Database Manager{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h2 class="mb-4">Database Manager</h2>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label for="query" class="form-label"><strong>SQL Query:</strong></label>
+                    <textarea name="query" class="form-control" rows="5">{{ query }}</textarea>
+                </div>
+                <button type="submit" class="btn btn-primary">Execute</button>
+            </form>
+        </div>
+    </div>
+
+    {% if error %}
+        <div class="alert alert-danger">{{ error }}</div>
+    {% endif %}
+
+    {% if results %}
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title">Results</h5>
+                <div class="table-responsive">
+                    <table class="table table-bordered table-striped">
+                        <thead>
+                            <tr>
+                                {% if results.0.items %}
+                                    {% for key, value in results.0.items %}
+                                        <th>{{ key }}</th>
+                                    {% endfor %}
+                                {% else %}
+                                     <th>Result</th>
+                                {% endif %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in results %}
+                                <tr>
+                                    {% if row.items %}
+                                        {% for key, value in row.items %}
+                                            <td>{{ value }}</td>
+                                        {% endfor %}
+                                    {% else %}
+                                        <td>{{ row.0 }}</td>
+                                    {% endif %}
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

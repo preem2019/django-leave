@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+
+{% block title %}ให้ข้อมูลเพิ่มเติม{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-container { max-width: 700px; margin: 0 auto; }
+    .form-card { border-radius: 0.75rem; border: none; }
+    .form-card .card-header { 
+        background-color: #0dcaf0; 
+        color: #000; 
+        border-radius: 0.75rem 0.75rem 0 0; 
+        padding: 1.5rem; 
+        text-align: center; 
+    }
+    .btn-submit { 
+        background-color: #0dcaf0; 
+        border-color: #0dcaf0; 
+        color: #000; 
+        font-weight: 600; 
+        padding: 0.75rem; 
+    }
+    .btn-submit:hover { background-color: #0b99b4; border-color: #0b99b4; }
+</style>
+{% endblock %}
+
+{% block breadcrumb %}
+  <a href="{% url 'app:dashboard' %}" class="text-decoration-none text-secondary">Dashboard</a>
+  <span class="mx-2">/</span>
+  <a href="{% url 'app:requests-pending' %}" class="text-decoration-none text-secondary">ประวัติคำขอ</a>
+  <span class="mx-2">/</span>
+  <span class="text-dark">ให้ข้อมูลเพิ่มเติม</span>
+{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <div class="card form-card shadow-lg">
+        <div class="card-header">
+            <h3><i class="fas fa-info-circle me-2"></i>ให้ข้อมูลเพิ่มเติมสำหรับคำขอ #{{ request.request_id }}</h3>
+        </div>
+        <div class="card-body p-4">
+            <div class="alert alert-warning">
+                <h5>ผู้อนุมัติต้องการข้อมูลเพิ่มเติม:</h5>
+                <p class="mb-0 fst-italic">"{{ request.info_request_comment|linebreaksbr }}"</p>
+            </div>
+
+            <!-- ===== จุดที่แก้ไข: เพิ่ม enctype="multipart/form-data" สำหรับการอัปโหลดไฟล์ ===== -->
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+
+                <p class="mt-4">กรุณาแก้ไข/เพิ่มเติมเหตุผล และแนบเอกสาร (ถ้ามี) แล้วกดส่งข้อมูล</p>
+
+                <div class="mb-3">
+                    <label for="reason" class="form-label fw-bold">รายละเอียด/เหตุผล (ฉบับแก้ไข)</label>
+                    <textarea name="reason" id="reason" class="form-control form-control-lg" rows="5" required>{{ request.reason }}</textarea>
+                </div>
+
+                <!-- ===== จุดที่แก้ไข: เพิ่มช่องสำหรับอัปโหลดไฟล์ ===== -->
+                <div class="mb-4">
+                    <label for="attachment" class="form-label fw-bold">แนบเอกสาร (ถ้ามี)</label>
+                    <input class="form-control form-control-lg" type="file" id="attachment" name="attachment">
+                    {% if request.attachment %}
+                        <small class="form-text text-muted mt-2 d-block">
+                            ไฟล์ปัจจุบัน: <a href="{{ request.attachment.url }}" target="_blank">{{ request.attachment.name }}</a> 
+                            (การอัปโหลดไฟล์ใหม่จะทับไฟล์เดิม)
+                        </small>
+                    {% endif %}
+                </div>
+
+                <div class="d-grid mt-4">
+                    <button type="submit" class="btn btn-lg btn-submit">
+                        <i class="fas fa-paper-plane me-2"></i>ส่งข้อมูลเพิ่มเติม
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

@@ -1,0 +1,18 @@
+สวัสดีคุณ {{ recipient_name }},
+
+{{ message_body }}
+
+---
+รายละเอียดคำขอ:
+- รหัสคำขอ: {{ request_obj.request_id }}
+- พนักงาน: {{ request_obj.employee.name }}
+- วันที่: {% if request_obj.leave_date %}{{ request_obj.leave_date|date:"d/m/Y" }}{% else %}-{% endif %}
+- ระยะเวลา: {{ request_obj.get_leave_duration_display }}
+- เหตุผล: {{ request_obj.reason|default:"-" }}
+---
+
+คุณสามารถเข้าสู่ระบบเพื่อดูรายละเอียดเพิ่มเติมและดำเนินการได้ที่ระบบ eLeave ของเรา
+
+ขอแสดงความนับถือ,
+ระบบ eLeave
+

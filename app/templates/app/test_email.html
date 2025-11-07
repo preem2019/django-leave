@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+
+{% block title %}ทดสอบ Template อีเมล{% endblock %}
+
+{% block breadcrumb %}
+  <a href="{% url 'app:dashboard' %}" class="text-decoration-none text-secondary">Dashboard</a>
+  <span class="mx-2">/</span>
+  <span class="text-dark">ทดสอบอีเมล</span>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h2 class="mb-4">หน้าทดสอบการแสดงผล Template อีเมล</h2>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-header">
+            <h4>1. ข้อมูลที่ส่งมา (Context Data)</h4>
+        </div>
+        <div class="card-body">
+            <p>ข้อมูลเหล่านี้คือสิ่งที่ View ส่งมาให้ Template:</p>
+            <ul>
+                <li><strong>recipient_name:</strong> <code>{{ recipient_name }}</code></li>
+                <li><strong>message_body:</strong> <code>{{ message_body }}</code></li>
+                <li><strong>request_obj.request_id:</strong> <code>{{ request_obj.request_id }}</code></li>
+                <li><strong>request_obj.employee.name:</strong> <code>{{ request_obj.employee.name }}</code></li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-header">
+            <h4>2. ผลลัพธ์การ Render จาก <code>notification_email.txt</code></h4>
+        </div>
+        <div class="card-body">
+            <p>นี่คือหน้าตาของอีเมลที่จะถูกส่งออกไปจริงๆ:</p>
+            <pre class="bg-light p-3 border rounded"><code>{% include 'app/email/notification_email.txt' %}</code></pre>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

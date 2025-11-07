@@ -1,0 +1,113 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>
+        {% block title %}
+            ระบบขออนุญาตออกนอกสถานที่
+        {% endblock %}
+    </title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <style>
+        body { background-color: #f8f9fa; display: flex; min-height: 100vh; flex-direction: column; }
+        .navbar-custom { background-color: {{ site_config.color_primary|default:'#3498db' }}; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); }
+        .main-content { flex: 1; padding-top: 2rem; padding-bottom: 2rem; }
+        .breadcrumb-bar { background-color: #ffffff; padding: 0.75rem 1rem; border-bottom: 1px solid #dee2e6; margin-bottom: 1.5rem; border-radius: 0.25rem; }
+        .footer { background-color: {{ site_config.color_primary|default:'#3498db' }}; color: white; padding: 1rem 0; text-align: center; margin-top: auto; }
+        .logout-form .btn { background: none; border: none; padding: 0; color: rgba(255, 255, 255, 0.75); font-size: inherit; font-family: inherit; cursor: pointer; }
+        .logout-form .btn:hover { color: #fff; }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark navbar-custom sticky-top">
+        <div class="container-fluid">
+            <a class="navbar-brand fw-bold" href="{% url 'app:dashboard' %}">{{ site_config.brand_name|default:'eLeave' }}</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"><span class="navbar-toggler-icon"></span></button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="{% url 'app:dashboard' %}"><i class="fas fa-home me-1"></i>หน้าหลัก</a>
+                    </li>
+
+                    {% if user.is_authenticated and not is_security %}
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">ระบบขออนุญาต</a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{% url 'app:create-request' %}">ยื่นคำขออนุญาต</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{% url 'app:requests-pending' %}">ประวัติคำขอ (รออนุมัติ)</a></li>
+                            <li><a class="dropdown-item" href="{% url 'app:requests-approved' %}">ประวัติคำขอ (อนุมัติแล้ว)</a></li>
+                            <li><a class="dropdown-item" href="{% url 'app:requests-rejected' %}">ประวัติคำขอ (ถูกปฏิเสธ)</a></li>
+                        </ul>
+                    </li>
+                    {% endif %}
+                    
+                    {% if is_approver_or_admin %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'app:approval-inbox' %}">
+                            <i class="fas fa-check-to-slot me-1"></i>กล่องงานอนุมัติ
+                            {% if approval_inbox_count > 0 %}<span class="badge bg-danger rounded-pill">{{ approval_inbox_count }}</span>{% endif %}
+                        </a>
+                    </li>
+                    {% endif %}
+
+                    {% if is_security %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'app:security-dashboard' %}"><i class="fas fa-shield-alt me-1"></i>จุดตรวจสอบ รปภ.</a>
+                    </li>
+                    {% endif %}
+
+                    {% if is_hr_or_admin %}
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown"><i class="fas fa-cog me-1"></i>ส่วนผู้ดูแลระบบ</a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{% url 'app:employee-list' %}">จัดการพนักงาน</a></li>
+                            <li><a class="dropdown-item" href="{% url 'app:create-user' %}">สร้างพนักงานใหม่</a></li>
+                            <li><a class="dropdown-item" href="{% url 'app:site-settings' %}">ตั้งค่าเว็บไซต์</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{% url 'app:in-out-history-report' %}">รายงานการเข้า-ออก</a></li>
+                        </ul>
+                    </li>
+                    {% endif %}
+                </ul>
+
+                <div class="d-flex align-items-center">
+                    {% if user.is_authenticated %}
+                      <span class="navbar-text me-3">สวัสดี, {{ user.first_name|default:user.username }}!</span>
+                      <form class="logout-form d-inline" action="{% url 'app:logout' %}" method="post">
+                        {% csrf_token %}
+                        <button type="submit" class="btn"><i class="fas fa-sign-out-alt me-1"></i>ออกจากระบบ</button>
+                      </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="main-content container">
+        <div class="breadcrumb-bar shadow-sm">
+            {% block breadcrumb %}<a href="{% url 'app:dashboard' %}" class="text-decoration-none text-secondary"><i class="fas fa-home me-2"></i>หน้าหลัก</a>{% endblock %}
+        </div>
+        
+        {% if messages %}{% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show text-center" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}{% endif %}
+        
+        {% block content %}
+        {% endblock %}
+        </main>
+
+    <footer class="footer">
+        <span>{{ site_config.footer_text|safe|default:"&copy; 2025 ระบบขออนุญาตออกนอกสถานที่" }}</span>
+    </footer>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

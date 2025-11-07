@@ -1,0 +1,143 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Dashboard - ระบบขออนุญาตฯ{% endblock %}
+
+{% block extra_css %}
+  <style>
+    .dashboard-card {
+      border-radius: 0.5rem;
+      color: #fff;
+      transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+      text-decoration: none;
+    }
+    .dashboard-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 8px 15px rgba(0, 0, 0, 0.15);
+      color: #fff;
+    }
+    .dashboard-card .card-body {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1.5rem;
+    }
+    .dashboard-card .icon-part {
+      font-size: 3.5rem;
+      opacity: 0.8;
+    }
+    .dashboard-card .text-part {
+      text-align: right;
+    }
+    .dashboard-card .text-part h3 {
+      margin: 0;
+      font-size: 2.5rem;
+      font-weight: bold;
+    }
+    .dashboard-card .text-part p {
+      margin: 0;
+      font-size: 0.9rem;
+    }
+
+    /* ===== START: แก้ไขสี (เชื่อม Config) ===== */
+    .bg-card-orange { background-color: {{ site_config.color_warning|default:'#f39c12' }}; } /* Pending */
+    .bg-card-blue { background-color: {{ site_config.color_primary|default:'#3498db' }}; } /* Approved */
+    .bg-card-red { background-color: {{ site_config.color_danger|default:'#e74c3c' }}; } /* Rejected */
+    /* ===== END: แก้ไขสี ===== */
+    
+    .bg-card-purple { background-color: #9b59b6; } /* Members */
+  </style>
+{% endblock %}
+
+{% block breadcrumb %}
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item active" aria-current="page"><i class="fas fa-tachometer-alt me-2"></i>Dashboard</li>
+        </ol>
+    </nav>
+{% endblock %}
+
+{% block content %}
+  <div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <div>
+        <h2 class="h4 mb-0">Dashboard</h2>
+        <small class="text-muted">ภาพรวมของระบบ</small>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-xl-3 col-md-6 mb-4">
+        <a href="{% url 'app:requests-pending' %}" class="card dashboard-card bg-card-orange shadow-sm">
+          <div class="card-body">
+            <div class="icon-part">
+              <i class="fas fa-user-clock"></i>
+            </div>
+            <div class="text-part">
+              <h3>{{ pending_requests_count|default:0 }}</h3>
+              <p>คำขอรออนุมัติ</p>
+            </div>
+          </div>
+        </a>
+      </div>
+
+      <div class="col-xl-3 col-md-6 mb-4">
+        <a href="{% url 'app:requests-approved' %}" class="card dashboard-card bg-card-blue shadow-sm">
+          <div class="card-body">
+            <div class="icon-part">
+              <i class="fas fa-check-circle"></i>
+            </div>
+            <div class="text-part">
+              <h3>{{ approved_requests_count|default:0 }}</h3>
+              <p>คำขอที่อนุมัติแล้ว</p>
+            </div>
+          </div>
+        </a>
+      </div>
+
+      <div class="col-xl-3 col-md-6 mb-4">
+        <a href="{% url 'app:requests-rejected' %}" class="card dashboard-card bg-card-red shadow-sm">
+          <div class="card-body">
+            <div class="icon-part">
+              <i class="fas fa-times-circle"></i>
+            </div>
+            <div class="text-part">
+              <h3>{{ rejected_requests_count|default:0 }}</h3>
+              <p>คำขอที่ถูกปฏิเสธ</p>
+            </div>
+          </div>
+        </a>
+      </div>
+
+      {% if is_hr_or_admin %}
+        <div class="col-xl-3 col-md-6 mb-4">
+          <a href="{% url 'app:employee-list' %}" class="card dashboard-card bg-card-purple shadow-sm">
+            <div class="card-body">
+              <div class="icon-part">
+                <i class="fas fa-users"></i>
+              </div>
+              <div class="text-part">
+                <h3>{{ total_employees_count|default:0 }}</h3>
+                <p>พนักงานทั้งหมด</p>
+              </div>
+            </div>
+          </a>
+        </div>
+      {% endif %}
+    </div>
+    
+    {% if approval_inbox_count > 0 %}
+    <div class="row mt-3">
+        <div class="col-12">
+            <div class="alert alert-warning text-center" role="alert">
+                <h4 class="alert-heading">คุณมีรายการที่ต้องอนุมัติ!</h4>
+                <p>มี <strong>{{ approval_inbox_count }}</strong> รายการที่รอการดำเนินการจากคุณในกล่องงานอนุมัติ</p>
+                <hr>
+                <a href="{% url 'app:approval-inbox' %}" class="btn btn-warning fw-bold">ไปที่กล่องงานอนุมัติ <i class="fas fa-arrow-circle-right ms-1"></i></a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+  </div>
+{% endblock %}

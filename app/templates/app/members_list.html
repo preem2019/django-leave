@@ -1,0 +1,161 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}จัดการรายชื่อพนักงาน{% endblock %}
+
+{% block breadcrumb %}
+  <a href="{% url 'app:dashboard' %}" class="text-decoration-none text-secondary">Dashboard</a>
+  <span class="mx-2">/</span>
+  <span class="text-dark">รายชื่อพนักงาน</span>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="h4 mb-0"><i class="fas fa-users me-2"></i>รายชื่อพนักงานทั้งหมด</h2>
+            <small class="text-muted">จัดการข้อมูลพนักงานในระบบ</small>
+        </div>
+        <a href="{% url 'app:create-user' %}" class="btn btn-primary">
+            <i class="fas fa-user-plus me-2"></i>เพิ่มพนักงานใหม่
+        </a>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <form method="get" action="{% url 'app:employee-list' %}">
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-10">
+                        <label for="search_query" class="form-label">ค้นหา (ชื่อ, Username, แผนก, ตำแหน่ง)</label>
+                        <input type="text" name="search_query" id="search_query" class="form-control" value="{{ search_query|default:'' }}" placeholder="เช่น สมชาย, admin, IT...">
+                    </div>
+                    <input type="hidden" name="sort" value="{{ current_sort|default:'employee_id' }}">
+                    <input type="hidden" name="order" value="{{ current_order|default:'asc' }}">
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-primary w-100"><i class="fas fa-search me-1"></i> ค้นหา</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light text-center">
+                        <tr>
+                            <th>
+                                <a href="?search_query={{ search_query|default:'' }}&sort=employee_id&order={% if current_sort == 'employee_id' and current_order == 'asc' %}desc{% else %}asc{% endif %}" class="text-decoration-none text-dark d-block">
+                                    ID
+                                    {% if current_sort == 'employee_id' %}
+                                        <i class="fas fa-sort-{% if current_order == 'asc' %}up{% else %}down{% endif %} ms-1"></i>
+                                    {% else %}
+                                        <i class="fas fa-sort text-muted ms-1"></i>
+                                    {% endif %}
+                                </a>
+                            </th>
+
+                            <th class="text-start">
+                                <a href="?search_query={{ search_query|default:'' }}&sort=user__username&order={% if current_sort == 'user__username' and current_order == 'asc' %}desc{% else %}asc{% endif %}" class="text-decoration-none text-dark">
+                                    Username (Login)
+                                    {% if current_sort == 'user__username' %}
+                                        <i class="fas fa-sort-{% if current_order == 'asc' %}up{% else %}down{% endif %} ms-1"></i>
+                                    {% else %}
+                                        <i class="fas fa-sort text-muted ms-1"></i>
+                                    {% endif %}
+                                </a>
+                            </th>
+                            <th class="text-start">
+                                <a href="?search_query={{ search_query|default:'' }}&sort=name&order={% if current_sort == 'name' and current_order == 'asc' %}desc{% else %}asc{% endif %}" class="text-decoration-none text-dark">
+                                    ชื่อ - นามสกุล
+                                    {% if current_sort == 'name' %}
+                                        <i class="fas fa-sort-{% if current_order == 'asc' %}up{% else %}down{% endif %} ms-1"></i>
+                                    {% else %}
+                                        <i class="fas fa-sort text-muted ms-1"></i>
+                                    {% endif %}
+                                </a>
+                            </th>
+
+                            <th>แผนก</th>
+                            <th>ตำแหน่ง</th>
+                            <th>บทบาท (Role)</th>
+                            <th>การจัดการ</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-center">
+                        {% for employee in employees %}
+                        <tr>
+                            <td>{{ employee.employee_id }}</td>
+
+                            <td class="text-start">{{ employee.user.username }}</td>
+                            <td class="text-start fw-bold">{{ employee.name }}</td>
+                            <td>{{ employee.department.department_name }}</td>
+                            <td>{{ employee.position.position_name }}</td>
+                            <td><span class="badge bg-info">{{ employee.role.role_name|capfirst }}</span></td>
+                            <td>
+                                <a href="{% url 'app:edit-employee' employee.employee_id %}" class="btn btn-sm btn-warning">
+                                    <i class="fas fa-edit"></i> แก้ไข
+                                </a>
+                                {% if user.employee.employee_id != employee.employee_id and not employee.user.is_superuser %}
+                                <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal" data-employee-id="{{ employee.employee_id }}" data-employee-name="{{ employee.name }}">
+                                    <i class="fas fa-trash"></i> ลบ
+                                </button>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center p-5">
+                                <p class="text-muted">ไม่พบข้อมูลพนักงานที่ตรงกับการค้นหา</p>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form id="deleteForm" method="post">
+                {% csrf_token %}
+                <div class="modal-header text-white" style="background-color: {{ site_config.color_danger|default:'#dc3545' }};">
+                <h5 class="modal-title" id="deleteModalLabel"><i class="fas fa-exclamation-triangle me-2"></i>ยืนยันการลบข้อมูล</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>คุณต้องการลบพนักงาน <strong id="employeeName"></strong> ออกจากระบบใช่หรือไม่?</p>
+                    <p class="text-danger">การกระทำนี้ไม่สามารถย้อนกลับได้ และบัญชีผู้ใช้ที่ผูกกับพนักงานนี้จะถูกลบไปด้วย</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+                    <button type="submit" class="btn btn-danger">ยืนยันการลบ</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var deleteModal = document.getElementById('deleteModal');
+    deleteModal.addEventListener('show.bs.modal', function (event) {
+        var button = event.relatedTarget;
+        var employeeId = button.getAttribute('data-employee-id');
+        var employeeName = button.getAttribute('data-employee-name');
+
+        var modalForm = deleteModal.querySelector('#deleteForm');
+        var modalEmployeeName = deleteModal.querySelector('#employeeName');
+
+        var actionUrl = `/user/delete/${employeeId}/`;
+        modalForm.setAttribute('action', actionUrl);
+        modalEmployeeName.textContent = employeeName;
+    });
+});
+</script>
+{% endblock %}

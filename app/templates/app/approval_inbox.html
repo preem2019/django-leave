@@ -1,0 +1,239 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}กล่องงานอนุมัติ - ระบบขออนุญาตฯ{% endblock %}
+
+{% block extra_css %}
+<style>
+    .table-hover tbody tr:hover {
+        background-color: #f1f9ff;
+        cursor: pointer;
+    }
+    .table th {
+        background-color: #e9ecef;
+    }
+    
+    /* ===== START: แก้ไขสี (เชื่อม Config) ===== */
+    .modal-header-approve { background-color: {{ site_config.color_success|default:'#28a745' }}; color: white; }
+    .modal-header-reject { background-color: {{ site_config.color_danger|default:'#dc3545' }}; color: white; }
+    /* ===== END: แก้ไขสี ===== */
+
+    .modal-header-info { background-color: #0dcaf0; color: #000; }
+    
+    /* Timeline Styles */
+    .timeline { list-style: none; padding: 0; margin-top: 1rem; }
+    .timeline-item { display: flex; gap: 1rem; margin-bottom: 1.25rem; }
+    .timeline-icon { flex-shrink: 0; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.2rem; }
+    .timeline-content { padding-top: 5px; }
+    .timeline-content blockquote { font-size: 0.9rem; background-color: #f8f9fa; border-left: 5px solid #e9ecef; padding: 0.5rem 1rem; margin-top: 0.5rem; margin-left: 0; }
+    .modal-body ul { padding-left: 20px; }
+</style>
+{% endblock %}
+
+{% block breadcrumb %}
+    <a href="{% url 'app:dashboard' %}" class="text-decoration-none text-secondary">Dashboard</a>
+    <span class="mx-2">/</span>
+    <span class="text-dark">กล่องงานอนุมัติ</span>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="h4 mb-0"><i class="fas fa-inbox me-2"></i>กล่องงานอนุมัติ</h2>
+            <small class="text-muted">รายการคำขอที่รอการดำเนินการจากคุณ</small>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            {% if pending_list %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="text-center">
+                            <tr>
+                                <th>รหัสคำขอ</th>
+                                <th class="text-start">ชื่อพนักงาน</th>
+                                <th>แผนก</th>
+                                <th>วันที่ขออนุญาต</th>
+                                <th>ระยะเวลา</th>
+                                <th>ยื่นเมื่อ</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-center">
+                            {% for history in pending_list %}
+                            <tr data-bs-toggle="modal" data-bs-target="#detailModal-{{ history.history_id }}">
+                                <td>{{ history.request.request_id }}</td>
+                                <td class="text-start">{{ history.request.employee.name }}</td>
+                                <td>{{ history.request.employee.department.department_name }}</td>
+                                <td>{{ history.request.leave_date|date:"d/m/Y" }}</td>
+                                <td><span class="badge bg-secondary">{{ history.request.get_leave_duration_display }}</span></td>
+                                <td>{{ history.request.request_datetime|date:"d/m/Y H:i" }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="text-center p-5">
+                    <i class="fas fa-check-circle fa-4x text-success mb-3"></i>
+                    <h4>ไม่มีรายการที่รอการอนุมัติ</h4>
+                    <p class="text-muted">กล่องงานของคุณว่างอยู่</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% for history in pending_list %}
+<div class="modal fade" id="detailModal-{{ history.history_id }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-file-invoice me-2"></i>รายละเอียดคำขอ #{{ history.request.request_id }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <h6>ข้อมูลคำขอ:</h6>
+                <ul>
+                    <li><strong>ผู้ยื่นคำขอ:</strong> {{ history.request.employee.name }}</li>
+                    <li><strong>วันที่ขออนุญาต:</strong> {{ history.request.leave_date|date:"d F Y" }} ({{ history.request.get_leave_duration_display }})</li>
+                    <li><strong>เหตุผล:</strong> {{ history.request.reason|linebreaksbr }}</li>
+                    {% if history.request.attachment %}
+                    <li><strong>เอกสารแนบ:</strong> <a href="{{ history.request.attachment.url }}" target="_blank" class="btn btn-sm btn-outline-primary"><i class="fas fa-paperclip me-1"></i> ดูเอกสาร</a></li>
+                    {% endif %}
+                </ul>
+                <hr>
+                <h6 class="mt-3">ประวัติการอนุมัติ:</h6>
+                <ul class="timeline">
+                    {% for h in history.request.ordered_approval_history %}
+                        <li class="timeline-item">
+                            {% if h.status == 'Approved' %}<div class="timeline-icon bg-success"><i class="fas fa-check"></i></div>
+                            {% elif h.status == 'Rejected' %}<div class="timeline-icon bg-danger"><i class="fas fa-times"></i></div>
+                            {% else %}<div class="timeline-icon bg-secondary"><i class="fas fa-hourglass-half"></i></div>{% endif %}
+                            <div class="timeline-content">
+                                <strong>{{ h.approver.name }}</strong> ({{ h.approver.role.role_name|capfirst }})
+                                {% if h.status == 'Approved' %}<span class="text-success fw-bold">อนุมัติ</span>
+                                {% elif h.status == 'Rejected' %}<span class="text-danger fw-bold">ปฏิเสธ</span>
+                                {% else %}<span class="text-muted">รอดำเนินการ</span>{% endif %}
+                                <small class="text-muted">{% if h.approval_date %} - {{ h.approval_date|date:"d/m/Y" }} {{ h.approval_time|date:"H:i" }}{% endif %}</small>
+                                {% if h.comment %}<blockquote>{{ h.comment|linebreaksbr }}</blockquote>{% endif %}
+                            </div>
+                        </li>
+                    {% empty %}
+                        <p class="text-muted">ยังไม่มีประวัติการอนุมัติ</p>
+                    {% endfor %}
+                </ul>
+            </div>
+            <div class="modal-footer justify-content-between">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ปิด</button>
+                <div>
+                    <button type="button" class="btn btn-info" data-bs-toggle="modal" data-bs-target="#confirmationModal" data-history-id="{{ history.history_id }}" data-employee-name="{{ history.request.employee.name }}" data-decision="request_info">
+                        <i class="fas fa-question-circle me-1"></i> ขอข้อมูลเพิ่ม
+                    </button>
+                    <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#confirmationModal" data-history-id="{{ history.history_id }}" data-employee-name="{{ history.request.employee.name }}" data-decision="reject">
+                        <i class="fas fa-times me-1"></i> ปฏิเสธ
+                    </button>
+                    <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#confirmationModal" data-history-id="{{ history.history_id }}" data-employee-name="{{ history.request.employee.name }}" data-decision="approve">
+                        <i class="fas fa-check me-1"></i> อนุมัติ
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+
+<div class="modal fade" id="confirmationModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form id="approvalForm" method="post">
+                {% csrf_token %}
+                <input type="hidden" name="decision" id="decisionInput">
+                <div class="modal-header" id="modalHeader">
+                    <h5 class="modal-title" id="approvalModalLabel">ยืนยันการตัดสินใจ</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p id="modalBodyText"></p>
+                    <div class="mb-3">
+                        <label for="comment" class="form-label"><strong id="commentLabel"></strong></label>
+                        <textarea class="form-control" id="comment" name="comment" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกิก</button>
+                    <button type="submit" class="btn" id="confirmButton">ยืนยัน</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var confirmationModal = document.getElementById('confirmationModal');
+    var approvalForm = document.getElementById('approvalForm'); // <-- เพิ่มตัวแปรสำหรับฟอร์ม
+    var confirmButton = confirmationModal.querySelector('#confirmButton'); // <-- ย้ายตัวแปรปุ่มมาตรงนี้
+
+    confirmationModal.addEventListener('show.bs.modal', function (event) {
+        var button = event.relatedTarget;
+
+        var historyId = button.getAttribute('data-history-id');
+        var employeeName = button.getAttribute('data-employee-name');
+        var decision = button.getAttribute('data-decision');
+
+        var modalHeader = confirmationModal.querySelector('#modalHeader');
+        var modalBodyText = confirmationModal.querySelector('#modalBodyText');
+        var decisionInput = confirmationModal.querySelector('#decisionInput');
+        // var confirmButton = confirmationModal.querySelector('#confirmButton'); // <-- ย้ายไปข้างบนแล้ว
+        var form = confirmationModal.querySelector('#approvalForm');
+        var commentLabel = confirmationModal.querySelector('#commentLabel');
+        var commentTextarea = confirmationModal.querySelector('#comment');
+
+        // --- เพิ่มเข้ามา: Reset ปุ่มทุกครั้งที่เปิด Modal ---
+        confirmButton.disabled = false; // ทำให้ปุ่มกลับมาคลิกได้
+        // ---------------------------------------------
+
+        var formActionUrl = `/approval/process/${historyId}/`;
+        form.setAttribute('action', formActionUrl);
+        decisionInput.value = decision;
+
+        commentTextarea.required = false;
+
+        if (decision === 'approve') {
+            modalHeader.className = 'modal-header modal-header-approve';
+            confirmButton.className = 'btn btn-success';
+            confirmButton.innerHTML = '<i class="fas fa-check me-1"></i> ยืนยันการอนุมัติ';
+            modalBodyText.innerHTML = `คุณต้องการ <strong>อนุมัติ</strong> คำขอของ <strong>${employeeName}</strong> ใช่หรือไม่?`;
+            commentLabel.textContent = 'ความคิดเห็น (ถ้ามี)';
+        } else if (decision === 'reject') {
+            modalHeader.className = 'modal-header modal-header-reject';
+            confirmButton.className = 'btn btn-danger';
+            confirmButton.innerHTML = '<i class="fas fa-times me-1"></i> ยืนยันการปฏิเสธ';
+            modalBodyText.innerHTML = `คุณต้องการ <strong>ปฏิเสธ</strong> คำขอของ <strong>${employeeName}</strong> ใช่หรือไม่?`;
+            commentLabel.textContent = 'เหตุผลการปฏิเสธ (ถ้ามี)';
+        } else { // request_info
+            modalHeader.className = 'modal-header modal-header-info';
+            confirmButton.className = 'btn btn-info';
+            confirmButton.innerHTML = '<i class="fas fa-paper-plane me-1"></i> ส่งคำขอ';
+            modalBodyText.innerHTML = `คุณต้องการขอข้อมูลเพิ่มเติมจาก <strong>${employeeName}</strong> ใช่หรือไม่?`;
+            commentLabel.textContent = 'ระบุข้อมูลที่ต้องการ (บังคับกรอก)';
+            commentTextarea.required = true;
+        }
+    });
+
+    // --- เพิ่มเข้ามา: จัดการการ submit ฟอร์ม ---
+    approvalForm.addEventListener('submit', function() {
+        // Disable ปุ่มเมื่อฟอร์มถูก submit
+        confirmButton.disabled = true;
+        // (Optionally) เปลี่ยนข้อความปุ่มเพื่อแสดงสถานะกำลังโหลด
+        confirmButton.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> กำลังดำเนินการ...';
+    });
+    // -------------------------------------------
+});
+</script>
+{% endblock %}

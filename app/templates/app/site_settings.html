@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+
+{% block title %}ตั้งค่าเว็บไซต์{% endblock %}
+
+{% block breadcrumb %}
+  <a href="{% url 'app:dashboard' %}" class="text-decoration-none text-secondary">Dashboard</a>
+  <span class="mx-2">/</span>
+  <span class="text-dark">ตั้งค่าเว็บไซต์</span>
+{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 800px;">
+    <div class="card shadow-sm">
+        <div class="card-header">
+            <h4 class="mb-0"><i class="fas fa-palette me-2"></i>ตั้งค่าการแสดงผลเว็บไซต์</h4>
+        </div>
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+                
+                <h5 class="mb-3">อัตลักษณ์ (Branding)</h5>
+                <div class="mb-3">
+                    <label for="{{ form.brand_name.id_for_label }}" class="form-label">{{ form.brand_name.label }}</label>
+                    <input type="text" class="form-control" name="{{ form.brand_name.name }}" id="{{ form.brand_name.id_for_label }}" value="{{ form.brand_name.value|default:'eLeave' }}">
+                </div>
+                <div class="mb-3">
+                    <label for="{{ form.footer_text.id_for_label }}" class="form-label">{{ form.footer_text.label }}</label>
+                    <input type="text" class="form-control" name="{{ form.footer_text.name }}" id="{{ form.footer_text.id_for_label }}" value="{{ form.footer_text.value|default:'&copy; 2025' }}">
+                </div>
+                
+                <hr>
+                <h5 class="mb-3">โทนสี (Theme Colors)</h5>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.color_primary.id_for_label }}" class="form-label">{{ form.color_primary.label }}</label>
+                        <input type="color" class="form-control form-control-color" id="{{ form.color_primary.id_for_label }}" name="{{ form.color_primary.name }}" value="{{ form.color_primary.value|default:'#3498db' }}">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.color_success.id_for_label }}" class="form-label">{{ form.color_success.label }}</label>
+                        <input type="color" class="form-control form-control-color" id="{{ form.color_success.id_for_label }}" name="{{ form.color_success.name }}" value="{{ form.color_success.value|default:'#198754' }}">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.color_warning.id_for_label }}" class="form-label">{{ form.color_warning.label }}</label>
+                        <input type="color" class="form-control form-control-color" id="{{ form.color_warning.id_for_label }}" name="{{ form.color_warning.name }}" value="{{ form.color_warning.value|default:'#f39c12' }}">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.color_danger.id_for_label }}" class="form-label">{{ form.color_danger.label }}</label>
+                        <input type="color" class="form-control form-control-color" id="{{ form.color_danger.id_for_label }}" name="{{ form.color_danger.name }}" value="{{ form.color_danger.value|default:'#e74c3c' }}">
+                    </div>
+                </div>
+
+                <hr>
+                <button type="submit" class="btn btn-primary"><i class="fas fa-save me-2"></i>บันทึกการเปลี่ยนแปลง</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
