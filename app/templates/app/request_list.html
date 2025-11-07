@@ -42,11 +42,12 @@
                             <th class="text-start">เหตุผล</th>
                             <th>สถานะ</th>
                             <th>วันที่ยื่นเรื่อง</th> 
-                        </tr>
+                            <th>การจัดการ</th> </tr>
                     </thead>
                     <tbody class="text-center">
                         {% for request in requests %}
                         <tr data-bs-toggle="modal" data-bs-target="#detailModal-{{ request.request_id }}">
+                            
                             <td>{{ request.request_id }}</td>
                             <td>{{ request.leave_date|date:"d/m/Y" }}</td>
                             <td>{{ request.get_leave_duration_display }}</td>
@@ -59,9 +60,24 @@
                                 {% endwith %}
                             </td>
                             <td>{{ request.request_datetime|date:"d/m/Y H:i" }}</td>
+
+                            <td onclick="event.stopPropagation();"> {% if request.status == 'Pending' or request.status == 'Info Requested' %}
+                                    <button type="button" class="btn btn-sm btn-danger" 
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#cancelModal-{{ request.request_id }}">
+                                        <i class="fas fa-times me-1"></i> ยกเลิก
+                                    </button>
+                                {% endif %}
+
+                                {% if status_title == 'อนุมัติแล้ว' %}
+                                    <a href="{% url 'app:print-request' request.request_id %}" target="_blank" class="btn btn-sm btn-info">
+                                        <i class="fas fa-print me-1"></i> พิมพ์
+                                    </a>
+                                {% endif %}
+                            </td>
                         </tr>
                         {% empty %}
-                        <tr><td colspan="6" class="text-center p-5"><p class="text-muted">ไม่พบรายการคำขอ</p></td></tr>
+                        <tr><td colspan="7" class="text-center p-5"><p class="text-muted">ไม่พบรายการคำขอ</p></td></tr>
                         {% endfor %}
                     </tbody>
                 </table>
@@ -70,7 +86,6 @@
     </div>
 </div>
 
-<!-- Modals for Request Details -->
 {% for request in requests %}
 <div class="modal fade" id="detailModal-{{ request.request_id }}" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
@@ -80,7 +95,6 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <!-- ===== จุดที่แก้ไข: เพิ่ม Alert สำหรับสถานะ "รอข้อมูลเพิ่มเติม" ===== -->
                 {% if request.status == 'Info Requested' %}
                 <div class="alert alert-info">
                     <h5 class="alert-heading">ผู้อนุมัติขอข้อมูลเพิ่มเติม:</h5>
@@ -97,7 +111,6 @@
                     <li><strong>ผู้ยื่นคำขอ:</strong> {{ request.employee.name }}</li>
                     <li><strong>วันที่ขออนุญาต:</strong> {{ request.leave_date|date:"d F Y" }} ({{ request.get_leave_duration_display }})</li>
                     <li><strong>เหตุผล:</strong> {{ request.reason|linebreaksbr }}</li>
-                    <!-- ===== จุดที่แก้ไข: เพิ่มลิงก์สำหรับดูเอกสารแนบ ===== -->
                     {% if request.attachment %}
                     <li><strong>เอกสารแนบ:</strong> <a href="{{ request.attachment.url }}" target="_blank" class="btn btn-sm btn-outline-primary"><i class="fas fa-paperclip me-1"></i> ดูเอกสาร</a></li>
                     {% endif %}
@@ -129,6 +142,11 @@
                 </ul>
             </div>
             <div class="modal-footer">
+                {% if request.status == 'Approved' %}
+                    <a href="{% url 'app:print-request' request.request_id %}" target="_blank" class="btn btn-primary">
+                        <i class="fas fa-print me-1"></i> พิมพ์คำขอ
+                    </a>
+                {% endif %}
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ปิด</button>
             </div>
         </div>
@@ -136,5 +154,37 @@
 </div>
 {% endfor %}
 
+{% for request in requests %}
+    {% if request.status == 'Pending' or request.status == 'Info Requested' %}
+    <div class="modal fade" id="cancelModal-{{ request.request_id }}" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <form action="{% url 'app:cancel-request' request.request_id %}" method="post">
+                    {% csrf_token %}
+                    <div class="modal-header bg-danger text-white">
+                        <h5 class="modal-title"><i class="fas fa-exclamation-triangle me-2"></i>ยืนยันการยกเลิกคำขอ #{{ request.request_id }}</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>คุณต้องการยกเลิกคำขอนี้ใช่หรือไม่? การดำเนินการนี้ไม่สามารถย้อนกลับได้</p>
+                        <div class="mb-3">
+                            <label for="cancel_reason_{{ request.request_id }}" class="form-label fw-bold">เหตุผลในการยกเลิก (บังคับกรอก):</label>
+                            <textarea class="form-control" 
+                                      id="cancel_reason_{{ request.request_id }}" 
+                                      name="cancel_reason" 
+                                      rows="3" 
+                                      placeholder="เช่น พิมพ์วันที่ผิด, ลูกค้ายกเลิกนัด ฯลฯ" 
+                                      required></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ปิด</button>
+                        <button type="submit" class="btn btn-danger">ยืนยันการยกเลิก</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+{% endfor %}
 {% endblock %}
-

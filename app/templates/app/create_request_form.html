@@ -5,52 +5,30 @@
 
 {% block extra_css %}
 <style>
-    .form-container {
-        max-width: 700px;
-        width: 100%;
-        margin: 0 auto;
-    }
-    .form-card {
-        border-radius: 0.75rem;
-        border: none;
-    }
+    .form-container { max-width: 700px; width: 100%; margin: 0 auto; }
+    .form-card { border-radius: 0.75rem; border: none; }
     .form-card .card-header {
-        /* ===== START: แก้ไข ===== */
-        background-color: {{ site_config.color_primary|default:'#3498db' }};
-        /* ===== END: แก้ไข ===== */
+        background-color: {{ site_config.color_primary|default:'#3498db' }}; /* (แก้ไข) */
         color: white;
         border-top-left-radius: 0.75rem;
         border-top-right-radius: 0.75rem;
         padding: 1.5rem;
         text-align: center;
     }
-    .form-card .card-header h3 {
-        margin: 0;
-        font-weight: 600;
-    }
-    .form-card .card-body {
-        padding: 2rem;
-    }
+    /* ... (โค้ดที่เหลือ) ... */
     .form-control:focus, .form-select:focus {
-        /* ===== START: แก้ไข ===== */
-        box-shadow: 0 0 0 0.25rem {{ site_config.color_primary|default:'#3498db' }}40; /* 40 = 25% opacity */
-        border-color: {{ site_config.color_primary|default:'#3498db' }};
-        /* ===== END: แก้ไข ===== */
+        box-shadow: 0 0 0 0.25rem rgba(52, 152, 219, 0.25);
+        border-color: {{ site_config.color_primary|default:'#3498db' }}; /* (แก้ไข) */
     }
     .btn-submit {
-        /* ===== START: แก้ไข ===== */
-        background-color: {{ site_config.color_success|default:'#2ecc71' }};
-        border-color: {{ site_config.color_success|default:'#2ecc71' }};
-        /* ===== END: แก้ไข ===== */
+        background-color: {{ site_config.color_success|default:'#2ecc71' }}; /* (แก้ไข) */
+        border-color: {{ site_config.color_success|default:'#2ecc71' }}; /* (แก้ไข) */
         font-weight: 600;
         padding: 0.75rem;
     }
     .btn-submit:hover {
-        /* ===== START: แก้ไข (เปลี่ยนวิธี hover) ===== */
-        background-color: {{ site_config.color_success|default:'#27ae60' }};
-        border-color: {{ site_config.color_success|default:'#27ae60' }};
-        filter: brightness(90%);
-        /* ===== END: แก้ไข ===== */
+        background-color: {{ site_config.color_success_dark|default:'#27ae60' }}; /* (แก้ไข) */
+        border-color: {{ site_config.color_success_dark|default:'#27ae60' }}; /* (แก้ไข) */
     }
     .input-group-text {
         background-color: #e9ecef;

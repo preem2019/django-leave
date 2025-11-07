@@ -15,6 +15,8 @@ urlpatterns = [
     path('requests/approved/', views.approved_requests_view, name='requests-approved'),
     path('requests/rejected/', views.rejected_requests_view, name='requests-rejected'),
     path('request/<int:request_id>/provide-info/', views.provide_info_view, name='provide-info'),
+    path('request/<int:request_id>/cancel/', views.cancel_leave_request, name='cancel-request'),
+    path('request/<int:request_id>/print/', views.print_leave_request, name='print-request'),
 
     # --- URL สำหรับผู้อนุมัติ ---
     path('approval-inbox/', views.approval_inbox, name='approval-inbox'),
@@ -25,11 +27,14 @@ urlpatterns = [
     path('security/record-out/<int:request_id>/', views.record_time_out, name='record-time-out'),
     path('security/record-in/<int:history_id>/', views.record_time_in, name='record-time-in'),
 
+    # --- START: Visitor Log ---
+    path('security/visitor-log-in/', views.visitor_log_in, name='visitor-log-in'),
+    path('security/visitor-log-out/<int:log_id>/', views.visitor_log_out, name='visitor-log-out'),
+    
     # --- URL สำหรับรายงาน (HR/Admin) ---
     path('reports/in-out-history/', views.in_out_history_report, name='in-out-history-report'),
-    # --- START: บรรทัดที่เพิ่มเข้ามาเพื่อแก้ Error ---
     path('reports/in-out-history/export/', views.export_in_out_history_excel, name='export-in-out-history-excel'),
-    # --- END ---
+    path('reports/statistics/', views.statistics_view, name='statistics-view'),
 
     # --- URL สำหรับการจัดการพนักงาน (สำหรับ HR/Admin) ---
     path('users/', views.employee_list_view, name='employee-list'),
@@ -49,5 +54,6 @@ urlpatterns = [
 
     # --- URL สำหรับทดสอบอีเมล ---
     path('test-email/<int:request_id>/', views.test_email_view, name='test-email'),
+    
 ]
 

@@ -7,9 +7,7 @@
     .form-container { max-width: 800px; margin: 0 auto; }
     .form-card { border-radius: 0.75rem; border: none; }
     .form-card .card-header {
-        /* ===== START: แก้ไข (เพิ่ม |default) ===== */
-        background-color: {{ site_config.color_warning|default:'#ffc107' }};
-        /* ===== END: แก้ไข ===== */
+        background-color: {{ site_config.color_warning|default:'#ffc107' }}; /* (แก้ไข) */
         color: #333;
         border-top-left-radius: 0.75rem;
         border-top-right-radius: 0.75rem;
@@ -17,28 +15,20 @@
         text-align: center;
     }
     .form-control:focus, .form-select:focus {
-        /* ===== START: แก้ไข (เพิ่ม |default) ===== */
-        /* (ใช้ #40 ต่อท้าย hex code เพื่อแทนค่า opacity 25%) */
-        box-shadow: 0 0 0 0.25rem {{ site_config.color_warning|default:'#ffc107' }}40; 
-        border-color: {{ site_config.color_warning|default:'#ffc107' }};
-        /* ===== END: แก้ไข ===== */
+        box-shadow: 0 0 0 0.25rem rgba(255, 193, 7, 0.25);
+        border-color: {{ site_config.color_warning|default:'#ffc107' }}; /* (แก้ไข) */
     }
     .btn-update {
-        /* ===== START: แก้ไข (เพิ่ม |default) ===== */
-        background-color: {{ site_config.color_warning|default:'#ffc107' }};
-        border-color: {{ site_config.color_warning|default:'#ffc107' }};
-        /* ===== END: แก้ไข ===== */
+        background-color: {{ site_config.color_warning|default:'#ffc107' }}; /* (แก้ไข) */
+        border-color: {{ site_config.color_warning|default:'#ffc107' }}; /* (แก้ไข) */
         font-weight: 600;
         padding: 0.75rem;
         color: #333;
     }
-    /* ===== START: แก้ไข (เปลี่ยนวิธี hover และเพิ่ม |default) ===== */
     .btn-update:hover { 
-        background-color: {{ site_config.color_warning|default:'#e0a800' }};
-        border-color: {{ site_config.color_warning|default:'#e0a800' }};
-        filter: brightness(90%);
+        background-color: {{ site_config.color_warning_dark|default:'#e0a800' }}; /* (แก้ไข) */
+        border-color: {{ site_config.color_warning_dark|default:'#e0a800' }}; /* (แก้ไข) */
     }
-    /* ===== END: แก้ไข ===== */
     .input-group-text { background-color: #e9ecef; border: 1px solid #ced4da; min-width: 42px; display: flex; justify-content: center; }
 </style>
 {% endblock %}

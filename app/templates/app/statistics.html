@@ -1,0 +1,177 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Dashboard สรุปสถิติ{% endblock %}
+
+{% block breadcrumb %}
+  <a href="{% url 'app:dashboard' %}" class="text-decoration-none text-secondary">Dashboard</a>
+  <span class="mx-2">/</span>
+  <span class="text-dark">สรุปสถิติ</span>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="h4 mb-0"><i class="fas fa-chart-pie me-2"></i>Dashboard สรุปสถิติ</h2>
+            <small class="text-muted">ภาพรวมข้อมูลการขออนุญาตออกนอกสถานที่ทั้งหมด</small>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6 col-lg-3 mb-4">
+            <div class="card text-white shadow-sm" style="background-color: {{ site_config.color_primary|default:'#3498db' }};">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-file-alt me-2"></i>คำขอทั้งหมด</h5>
+                    <p class="card-text display-4 fw-bold">{{ total_requests }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 col-lg-3 mb-4">
+            <div class="card text-white shadow-sm" style="background-color: {{ site_config.color_success|default:'#198754' }};">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-check-circle me-2"></i>อนุมัติแล้ว</h5>
+                    <p class="card-text display-4 fw-bold">{{ status_data_json.data|slice:"0:1"|first|default:0 }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 col-lg-3 mb-4">
+            <div class="card text-white shadow-sm" style="background-color: {{ site_config.color_danger|default:'#dc3545' }};">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-times-circle me-2"></i>ปฏิเสธ/ยกเลิก</h5>
+                    <p class="card-text display-4 fw-bold">{{ status_data_json.data|slice:"2:3"|first|default:0 }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 col-lg-3 mb-4">
+            <div class="card text-dark shadow-sm" style="background-color: {{ site_config.color_warning|default:'#ffc107' }};">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="fas fa-id-card me-2"></i>บุคคลภายนอก (ทั้งหมด)</h5>
+                    <p class="card-text display-4 fw-bold">{{ total_visitors }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">จำนวนคำขอ (แยกตามแผนก)</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="departmentChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">สัดส่วนระยะเวลาที่ขอ</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="durationChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h5 class="mb-0">แนวโน้มคำขอรายเดือน</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="monthlyTrendChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        
+        const departmentData = JSON.parse('{{ department_data_json|safe }}');
+        const durationData = JSON.parse('{{ duration_data_json|safe }}');
+        const monthLabels = JSON.parse('{{ month_labels_json|safe }}');
+        const monthData = JSON.parse('{{ month_data_json|safe }}');
+
+        // (แก้ไข) ใช้สีจาก site_config ถ้ามี, หรือใช้ค่า default
+        const primaryColor = '{{ site_config.color_primary|default:"rgba(52, 152, 219, 0.7)" }}';
+        const primaryBorderColor = '{{ site_config.color_primary|default:"rgba(52, 152, 219, 1)" }}';
+        const warningColor = '{{ site_config.color_warning|default:"rgba(243, 156, 18, 0.8)" }}';
+        const dangerColor = '{{ site_config.color_danger|default:"rgba(231, 76, 60, 0.8)" }}';
+        const successColor = '{{ site_config.color_success|default:"rgba(46, 204, 113, 0.8)" }}';
+        const infoColor = '{{ site_config.color_info|default:"rgb(75, 192, 192)" }}';
+
+
+        const ctxDept = document.getElementById('departmentChart').getContext('2d');
+        new Chart(ctxDept, {
+            type: 'bar',
+            data: {
+                labels: departmentData.labels,
+                datasets: [{
+                    label: 'จำนวนคำขอ',
+                    data: departmentData.data,
+                    backgroundColor: primaryColor,
+                    borderColor: primaryBorderColor,
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                indexAxis: 'y', 
+                responsive: true,
+                plugins: {
+                    legend: { display: false }
+                }
+            }
+        });
+
+        const ctxDuration = document.getElementById('durationChart').getContext('2d');
+        new Chart(ctxDuration, {
+            type: 'doughnut',
+            data: {
+                labels: durationData.labels,
+                datasets: [{
+                    label: 'จำนวน',
+                    data: durationData.data,
+                    backgroundColor: [
+                        warningColor, 
+                        dangerColor,  
+                        successColor  
+                    ],
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true,
+            }
+        });
+
+        const ctxTrend = document.getElementById('monthlyTrendChart').getContext('2d');
+        new Chart(ctxTrend, {
+            type: 'line',
+            data: {
+                labels: monthLabels,
+                datasets: [{
+                    label: 'จำนวนคำขอต่อเดือน',
+                    data: monthData,
+                    fill: false,
+                    borderColor: infoColor,
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+            }
+        });
+    });
+</script>
+{% endblock %}

@@ -137,7 +137,42 @@ class InOutHistory(models.Model):
     )
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='OUT', null=True)
 
+    # --- START: บรรทัดที่เพิ่มเข้ามา ---
+    return_image = models.ImageField(
+        upload_to='return_images/', 
+        null=True, 
+        blank=True, 
+        verbose_name="ภาพถ่ายการกลับเข้า"
+    )
+    # --- END: บรรทัดที่เพิ่มเข้ามา ---
+
 
     def __str__(self):
         return f"InOut for {self.employee.name} on request {self.request.request_id}"
 
+# ==============================================================================
+# 5. Visitor Log Model (สำหรับ รปภ. บันทึกบุคคลภายนอก)
+# ==============================================================================
+
+class VisitorLog(models.Model):
+    log_id = models.AutoField(primary_key=True)
+    visitor_name = models.CharField(max_length=255, verbose_name="ชื่อผู้มาติดต่อ")
+    contact_person = models.CharField(max_length=255, verbose_name="ติดต่อใคร (พนักงาน/แผนก)")
+    reason = models.TextField(null=True, blank=True, verbose_name="เหตุผล/บริษัท")
+    
+    time_in = models.DateTimeField(default=timezone.now, verbose_name="เวลาเข้า")
+    time_out = models.DateTimeField(null=True, blank=True, verbose_name="เวลาออก")
+    
+    status = models.CharField(max_length=10, default='IN', choices=[('IN', 'อยู่ในพื้นที่'), ('OUT', 'ออกไปแล้ว')])
+
+    guard = models.ForeignKey(
+        Employee,
+        on_delete=models.SET_NULL, # ใช้ SET_NULL เผื่อ รปภ. คนนั้นลาออก ข้อมูล Log จะได้ไม่หาย
+        null=True,
+        related_name='visitor_logs_recorded',
+        db_column='guard_id',
+        limit_choices_to={'role__role_name__iexact': 'security'} 
+    )
+
+    def __str__(self):
+        return f"Visitor: {self.visitor_name} (Contact: {self.contact_person})"

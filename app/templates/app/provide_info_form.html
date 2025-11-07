@@ -7,20 +7,23 @@
     .form-container { max-width: 700px; margin: 0 auto; }
     .form-card { border-radius: 0.75rem; border: none; }
     .form-card .card-header { 
-        background-color: #0dcaf0; 
+        background-color: {{ site_config.color_info|default:'#0dcaf0' }}; /* (แก้ไข) */
         color: #000; 
         border-radius: 0.75rem 0.75rem 0 0; 
         padding: 1.5rem; 
         text-align: center; 
     }
     .btn-submit { 
-        background-color: #0dcaf0; 
-        border-color: #0dcaf0; 
+        background-color: {{ site_config.color_info|default:'#0dcaf0' }}; /* (แก้ไข) */
+        border-color: {{ site_config.color_info|default:'#0dcaf0' }}; /* (แก้ไข) */
         color: #000; 
         font-weight: 600; 
         padding: 0.75rem; 
     }
-    .btn-submit:hover { background-color: #0b99b4; border-color: #0b99b4; }
+    .btn-submit:hover { 
+        background-color: {{ site_config.color_info_dark|default:'#0b99b4' }}; /* (แก้ไข) */
+        border-color: {{ site_config.color_info_dark|default:'#0b99b4' }}; /* (แก้ไข) */
+    }
 </style>
 {% endblock %}
 

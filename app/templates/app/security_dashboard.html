@@ -20,7 +20,7 @@
 
     <div class="card shadow-sm mb-4">
         <div class="card-header text-white" style="background-color: {{ site_config.color_primary|default:'#3498db' }};">
-        <h5 class="mb-0"><i class="fas fa-sign-out-alt me-2"></i>รายการพนักงานที่พร้อมออกนอกสถานที่</h5>
+            <h5 class="mb-0"><i class="fas fa-sign-out-alt me-2"></i>รายการพนักงานที่พร้อมออกนอกสถานที่</h5>
         </div>
         <div class="card-body">
             <div class="table-responsive">
@@ -59,9 +59,9 @@
         </div>
     </div>
 
-    <div class="card shadow-sm">
+    <div class="card shadow-sm mb-4">
         <div class="card-header text-white" style="background-color: {{ site_config.color_success|default:'#198754' }};">
-        <h5 class="mb-0"><i class="fas fa-sign-in-alt me-2"></i>รายการพนักงานที่ออกไปแล้ว (รอการกลับเข้า)</h5>
+            <h5 class="mb-0"><i class="fas fa-sign-in-alt me-2"></i>รายการพนักงานที่ออกไปแล้ว (รอการกลับเข้า)</h5>
         </div>
         <div class="card-body">
             <div class="table-responsive">
@@ -81,13 +81,10 @@
                             <td class="text-start fw-bold">{{ history.employee.name }}</td>
                             <td>{{ history.time_out|date:"H:i:s" }} น.</td>
                             <td>
-                                <form action="{% url 'app:record-time-in' history.history_id %}" method="post" class="d-inline">
-                                    {% csrf_token %}
-                                    <button type="submit" class="btn btn-success btn-sm">
-                                        <i class="fas fa-check-circle me-1"></i> บันทึกเวลากลับเข้า
-                                    </button>
-                                </form>
-                            </td>
+                                <button type="button" class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#recordInModal-{{ history.history_id }}">
+                                    <i class="fas fa-check-circle me-1"></i> บันทึกเวลากลับเข้า
+                                </button>
+                                </td>
                         </tr>
                         {% empty %}
                         <tr><td colspan="4" class="text-center p-4 text-muted">ไม่มีพนักงานที่อยู่ข้างนอกในขณะนี้</td></tr>
@@ -97,5 +94,110 @@
             </div>
         </div>
     </div>
+    
+    <div class="row">
+        
+        <div class="col-lg-5 mb-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0"><i class="fas fa-id-card me-2"></i>บันทึกข้อมูลบุคคลภายนอก (Visitor)</h5>
+                </div>
+                <div class="card-body">
+                    <form action="{% url 'app:visitor-log-in' %}" method="post">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="visitor_name" class="form-label fw-bold">ชื่อผู้มาติดต่อ:</label>
+                            <input type="text" class="form-control" id="visitor_name" name="visitor_name" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="contact_person" class="form-label fw-bold">ติดต่อ (พนักงาน/แผนก):</label>
+                            <input type="text" class="form-control" id="contact_person" name="contact_person" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="reason" class="form-label">เหตุผล / บริษัท:</label>
+                            <textarea class="form-control" id="reason" name="reason" rows="2"></textarea>
+                        </div>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-dark btn-lg">
+                                <i class="fas fa-save me-1"></i> บันทึกเวลาเข้า
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-7 mb-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header text-dark" style="background-color: {{ site_config.color_warning|default:'#ffc107' }};">
+                    <h5 class="mb-0"><i class="fas fa-users me-2"></i>บุคคลภายนอกที่อยู่ในพื้นที่ (รอคืนบัตร)</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead class="table-light text-center">
+                                <tr>
+                                    <th class="text-start">ชื่อผู้ติดต่อ</th>
+                                    <th>ติดต่อใคร</th>
+                                    <th>เวลาเข้า</th>
+                                    <th>จัดการ</th>
+                                </tr>
+                            </thead>
+                            <tbody class="text-center">
+                                {% for visitor in visitors_inside %}
+                                <tr>
+                                    <td class="text-start fw-bold">{{ visitor.visitor_name }}</td>
+                                    <td>{{ visitor.contact_person }}</td>
+                                    <td>{{ visitor.time_in|date:"H:i:s" }} น.</td>
+                                    <td>
+                                        <form action="{% url 'app:visitor-log-out' visitor.log_id %}" method="post" class="d-inline">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-warning btn-sm">
+                                                <i class="fas fa-sign-out-alt me-1"></i> บันทึกเวลาออก
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr><td colspan="4" class="text-center p-4 text-muted">ไม่มีบุคคลภายนอกอยู่ในพื้นที่</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
-{% endblock %}
+
+{% for history in already_out_list %}
+<div class="modal fade" id="recordInModal-{{ history.history_id }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form action="{% url 'app:record-time-in' history.history_id %}" method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title">บันทึกเวลากลับเข้า: {{ history.employee.name }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>ยืนยันการบันทึกเวลากลับเข้าสำหรับ <strong>{{ history.employee.name }}</strong> (คำขอ #{{ history.request.request_id }})</p>
+                    
+                    <div class="mb-3">
+                        <label for="return_image_{{ history.history_id }}" class="form-label">
+                            <i class="fas fa-camera me-1"></i> อัปโหลดรูปภาพ (ถ้ามี)
+                        </label>
+                        <input class="form-control" type="file" id="return_image_{{ history.history_id }}" name="return_image" accept="image/*">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ปิด</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-check-circle me-1"></i> ยืนยันการกลับเข้า
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endfor %} {% endblock %}
