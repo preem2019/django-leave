@@ -42,6 +42,7 @@ class Employee(models.Model):
     department = models.ForeignKey(Department, on_delete=models.CASCADE, db_column='department_id')
     position = models.ForeignKey(Position, on_delete=models.CASCADE, db_column='position_id')
     role = models.ForeignKey(Role, on_delete=models.CASCADE, db_column='role_id')
+    must_change_password = models.BooleanField(default=True, verbose_name="ต้องเปลี่ยนรหัสผ่าน")
 
     def __str__(self):
         return self.name

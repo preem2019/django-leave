@@ -25,12 +25,18 @@
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark navbar-custom sticky-top">
         <div class="container-fluid">
-            <a class="navbar-brand fw-bold" href="{% url 'app:dashboard' %}">{{ site_config.brand_name|default:'eLeave' }}</a>
+            
+            {% if not must_change_password_page %}
+                <a class="navbar-brand fw-bold" href="{% url 'app:dashboard' %}">{{ site_config.brand_name|default:'eLeave' }}</a>
+            {% else %}
+                <span class="navbar-brand fw-bold">{{ site_config.brand_name|default:'eLeave' }}</span>
+            {% endif %}
+            
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"><span class="navbar-toggler-icon"></span></button>
             
-            <!-- (แก้ไข) เพิ่ม div .collapse.navbar-collapse หุ้มเมนูทั้งหมด -->
             <div class="collapse navbar-collapse" id="navbarNav">
-            
+                
+                {% if not must_change_password_page %}
                 <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                 
                 {% if not is_security %}
@@ -81,18 +87,25 @@
                         </li>
                         {% endif %}
                 </ul>
+                {% else %}
+                    <ul class="navbar-nav me-auto mb-2 mb-lg-0"></ul>
+                {% endif %}
 
                 <div class="d-flex align-items-center">
                     {% if user.is_authenticated %}
+                        
                         <span class="navbar-text me-3">สวัสดี, {{ user.first_name|default:user.username }}!</span>
                         
-                        {% if not is_security %}
-                        <a href="{% url 'app:profile-edit' %}" 
-                            class="btn btn-sm me-3" 
-                            style="color: rgba(255, 255, 255, 0.75); --bs-btn-hover-color: #fff; --bs-btn-active-color: #fff;">
-                            <i class="fas fa-user-cog me-1"></i>โปรไฟล์
-                        </a>
+                        {% if not must_change_password_page %}
+                            {% if not is_security %}
+                            <a href="{% url 'app:profile-edit' %}" 
+                                class="btn btn-sm me-3" 
+                                style="color: rgba(255, 255, 255, 0.75); --bs-btn-hover-color: #fff; --bs-btn-active-color: #fff;">
+                                <i class="fas fa-user-cog me-1"></i>โปรไฟล์
+                            </a>
+                            {% endif %}
                         {% endif %}
+
                         <form class="logout-form d-inline" action="{% url 'app:logout' %}" method="post">
                             {% csrf_token %}
                             <button type="submit" class="btn"><i class="fas fa-sign-out-alt me-1"></i>ออกจากระบบ</button>
@@ -100,15 +113,18 @@
                     {% endif %}
                 </div>
             
-            </div> <!-- (แก้ไข) ปิด div .collapse -->
+            </div>
             
         </div>
     </nav>
 
     <main class="main-content container">
+        
+        {% if not must_change_password_page %}
         <div class="breadcrumb-bar shadow-sm">
             {% block breadcrumb %}<a href="{% url 'app:dashboard' %}" class="text-decoration-none text-secondary"><i class="fas fa-home me-2"></i>หน้าหลัก</a>{% endblock %}
         </div>
+        {% endif %}
         
         {% if messages %}{% for message in messages %}
             <div class="alert alert-{{ message.tags }} alert-dismissible fade show text-center" role="alert">

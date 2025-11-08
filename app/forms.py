@@ -48,7 +48,7 @@ class EmployeeCreationForm(forms.ModelForm):
             employee.save()
         return employee
 
-# 3. ฟอร์มสำหรับหน้า "แก้ไขข้อมูลพนักงาน" (เพิ่มใหม่)
+# 3. ฟอร์มสำหรับหน้า "แก้ไขข้อมูลพนักงาน" (ปรับปรุงใหม่)
 class EmployeeUpdateForm(forms.ModelForm):
     # Fields from User model
     first_name = forms.CharField(max_length=150, required=True, label='ชื่อจริง')
@@ -58,6 +58,14 @@ class EmployeeUpdateForm(forms.ModelForm):
     department = forms.ModelChoiceField(queryset=Department.objects.all(), label='แผนก')
     position = forms.ModelChoiceField(queryset=Position.objects.all(), label='ตำแหน่ง')
     role = forms.ModelChoiceField(queryset=Role.objects.all(), label='บทบาท (Role)')
+
+    # --- ⬇️ (เพิ่มใหม่) ช่องสำหรับรีเซ็ตรหัสผ่าน ⬇️ ---
+    new_password = forms.CharField(
+        widget=forms.PasswordInput(attrs={'placeholder': 'กรอกรหัสผ่านใหม่ที่นี่'}),
+        required=False,
+        label='รีเซ็ตรหัสผ่านใหม่ (หากเว้นว่างไว้ รหัสผ่านเดิมจะยังคงอยู่)'
+    )
+    # --- ⬆️ (สิ้นสุดส่วนที่เพิ่ม) ⬆️ ---
 
     class Meta:
         model = Employee
@@ -73,7 +81,12 @@ class EmployeeUpdateForm(forms.ModelForm):
         # Apply Bootstrap classes
         for field_name, field in self.fields.items():
             css_class = 'form-select form-select-lg' if isinstance(field.widget, forms.Select) else 'form-control form-control-lg'
-            field.widget.attrs.update({'class': css_class})
+            
+            # (ปรับปรุง) ทำให้ช่อง password ไม่เป็น -lg และใช้ style ของมันเอง
+            if field_name == 'new_password':
+                 field.widget.attrs.update({'class': 'form-control'})
+            else:
+                field.widget.attrs.update({'class': css_class})
 
     def save(self, commit=True):
         employee = super().save(commit=False)
@@ -83,6 +96,13 @@ class EmployeeUpdateForm(forms.ModelForm):
         user.first_name = self.cleaned_data['first_name']
         user.last_name = self.cleaned_data['last_name']
         user.email = self.cleaned_data['email']
+        
+        new_password = self.cleaned_data.get('new_password')
+        if new_password:
+            # ใช้ set_password() จะข้ามการตรวจสอบ (Bypass Validation)
+            user.set_password(new_password)
+            # บังคับให้ผู้ใช้เปลี่ยนรหัสผ่านนี้ในครั้งถัดไป
+            employee.must_change_password = True
         
         # Update Employee model
         employee.name = f"{self.cleaned_data['first_name']} {self.cleaned_data['last_name']}"

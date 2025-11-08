@@ -8,35 +8,43 @@
     .form-container { max-width: 800px; width: 100%; margin: 0 auto; }
     .form-card { border-radius: 0.75rem; border: none; }
     .form-card .card-header {
-        background-color: {{ site_config.color_primary|default:'#3498db' }}; /* (แก้ไข) */
+        background-color: {{ site_config.color_primary|default:'#3498db' }};
         color: white;
         border-top-left-radius: 0.75rem;
         border-top-right-radius: 0.75rem;
         padding: 1.5rem;
         text-align: center;
     }
-    /* ... (โค้ดที่เหลือ) ... */
+    
     .form-control:focus, .form-select:focus {
         box-shadow: 0 0 0 0.25rem rgba(52, 152, 219, 0.25);
-        border-color: {{ site_config.color_primary|default:'#3498db' }}; /* (แก้ไข) */
+        border-color: {{ site_config.color_primary|default:'#3498db' }};
     }
     .btn-create {
-        background-color: {{ site_config.color_primary|default:'#3498db' }}; /* (แก้ไข) */
-        border-color: {{ site_config.color_primary|default:'#3498db' }}; /* (แก้ไข) */
+        background-color: {{ site_config.color_primary|default:'#3498db' }};
+        border-color: {{ site_config.color_primary|default:'#3498db' }};
         font-weight: 600;
         padding: 0.75rem;
     }
     .btn-create:hover {
-        background-color: {{ site_config.color_primary_dark|default:'#2980b9' }}; /* (แก้ไข) */
-        border-color: {{ site_config.color_primary_dark|default:'#2980b9' }}; /* (แก้ไข) */
+        background-color: {{ site_config.color_primary_dark|default:'#2980b9' }};
+        border-color: {{ site_config.color_primary_dark|default:'#2980b9' }};
+    }
+
+    /* --- ⬇️ (แก้ไข) เพิ่ม/แก้ไข 3 บรรทัดนี้ ⬇️ --- */
+    .form-control,
+    .form-select {
+        border-color: #000; /* เพิ่มเส้นขอบสีดำ */
     }
     .input-group-text {
         background-color: #e9ecef;
-        border: 1px solid #ced4da;
+        border-color: #000; /* ⬅️ เปลี่ยนเป็นสีดำ */
+        border-right: 0;   /* ⬅️ (สำคัญ) เอาเส้นขอบขวาออกกันมันทับกัน */
         min-width: 42px;
         display: flex;
         justify-content: center;
     }
+    /* --- ⬆️ (สิ้นสุดการแก้ไข) ⬆️ --- */
 </style>
 {% endblock %}
 
@@ -132,14 +140,12 @@
                     <span class="input-group-text"><i class="fas fa-envelope"></i></span>
                     {{ form.email }}
                 </div>
-                {# --- ส่วนที่เพิ่มเข้ามา --- #}
-                <div class="mb-3">
-                    <label class="form-label">Line User ID</label>
+                
+                <div class="input-group mb-3">
+                    <span class="input-group-text"><i class="fab fa-line" style="color: #06C755;"></i></span>
                     {{ form.line_user_id }}
-                    <small class="form-text text-muted">ใช้สำหรับส่งการแจ้งเตือนผ่าน Line</small>
                 </div>
-                {# ------------------------- #}
-
+                <small class="form-text text-muted d-block mt-n2 mb-3">ใช้สำหรับส่งการแจ้งเตือนผ่าน Line</small>
                 <div class="d-grid mt-4">
                     <button type="submit" class="btn btn-lg btn-create">
                         <i class="fas fa-plus-circle me-2"></i>สร้างพนักงาน

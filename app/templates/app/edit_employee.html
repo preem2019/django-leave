@@ -7,7 +7,7 @@
     .form-container { max-width: 800px; margin: 0 auto; }
     .form-card { border-radius: 0.75rem; border: none; }
     .form-card .card-header {
-        background-color: {{ site_config.color_warning|default:'#ffc107' }}; /* (แก้ไข) */
+        background-color: {{ site_config.color_warning|default:'#ffc107' }};
         color: #333;
         border-top-left-radius: 0.75rem;
         border-top-right-radius: 0.75rem;
@@ -16,20 +16,28 @@
     }
     .form-control:focus, .form-select:focus {
         box-shadow: 0 0 0 0.25rem rgba(255, 193, 7, 0.25);
-        border-color: {{ site_config.color_warning|default:'#ffc107' }}; /* (แก้ไข) */
+        border-color: {{ site_config.color_warning|default:'#ffc107' }};
     }
     .btn-update {
-        background-color: {{ site_config.color_warning|default:'#ffc107' }}; /* (แก้ไข) */
-        border-color: {{ site_config.color_warning|default:'#ffc107' }}; /* (แก้ไข) */
+        background-color: {{ site_config.color_warning|default:'#ffc107' }};
+        border-color: {{ site_config.color_warning|default:'#ffc107' }};
         font-weight: 600;
         padding: 0.75rem;
         color: #333;
     }
     .btn-update:hover { 
-        background-color: {{ site_config.color_warning_dark|default:'#e0a800' }}; /* (แก้ไข) */
-        border-color: {{ site_config.color_warning_dark|default:'#e0a800' }}; /* (แก้ไข) */
+        background-color: {{ site_config.color_warning_dark|default:'#e0a800' }};
+        border-color: {{ site_config.color_warning_dark|default:'#e0a800' }};
     }
     .input-group-text { background-color: #e9ecef; border: 1px solid #ced4da; min-width: 42px; display: flex; justify-content: center; }
+
+    /* --- ⬇️ (เพิ่ม) บังคับเส้นขอบสีดำให้ช่องกรอก ⬇️ --- */
+    .form-control,
+    .form-select {
+        border-color: #000; /* ⬅️ เพิ่มเส้นขอบสีดำ */
+    }
+    /* ------------------------------------------- */
+
 </style>
 {% endblock %}
 
@@ -54,6 +62,7 @@
                 {% if form.errors %}
                 <div class="alert alert-danger text-center">
                     <strong>เกิดข้อผิดพลาด!</strong> กรุณาตรวจสอบข้อมูลอีกครั้ง
+                    {{ form.new_password.errors }}
                 </div>
                 {% endif %}
 
@@ -92,13 +101,24 @@
                     <label class="form-label">อีเมล</label>
                     {{ form.email }}
                 </div>
-                {# --- ส่วนที่เพิ่มเข้ามา --- #}
                 <div class="mb-3">
                     <label class="form-label">Line User ID</label>
                     {{ form.line_user_id }}
                     <small class="form-text text-muted">ใช้สำหรับส่งการแจ้งเตือนผ่าน Line</small>
                 </div>
-                {# ------------------------- #}
+
+                <hr>
+                <h5 class="mb-3">รีเซ็ตรหัสผ่าน</h5>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">{{ form.new_password.label }}</label>
+                    {{ form.new_password }}
+                    <small class="form-text text-muted">
+                        การตั้งรหัสใหม่จากหน้านี้ <b><u>ไม่</u></b>จำเป็นต้องซับซ้อน (เช่น ตั้งเป็น '1234' ได้)
+                        <br>
+                        ระบบจะบังคับให้พนักงานเปลี่ยนรหัสผ่านนี้อีกครั้งในการ Login ครั้งถัดไป
+                    </small>
+                </div>
+
                 <div class="d-grid mt-4">
                     <button type="submit" class="btn btn-lg btn-update">
                         <i class="fas fa-save me-2"></i>บันทึกการเปลี่ยนแปลง

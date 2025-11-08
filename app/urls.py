@@ -11,6 +11,7 @@ urlpatterns = [
     
     # --- URL สำหรับโปรไฟล์ ---
     path('profile/', views.profile_edit_view, name='profile-edit'),
+    path('force-change-password/', views.force_change_password_view, name='force-change-password'),
     
     # --- URL สำหรับการจัดการคำขอ (สำหรับพนักงาน) ---
     path('request/new/', views.create_leave_request, name='create-request'),

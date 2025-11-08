@@ -16,7 +16,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.utils import timezone
 
 # --- 4. Local Application Imports ---
-from .forms import EmployeeCreationForm, EmployeeUpdateForm, SiteConfigurationForm,UserProfileForm
+from .forms import EmployeeCreationForm, EmployeeUpdateForm, SiteConfigurationForm, UserProfileForm, CustomPasswordChangeForm
 from .models import LeaveRequest, Employee, ApprovalHistory, InOutHistory, VisitorLog
 from .utils import send_notification_email, send_notification_line
 
@@ -1090,3 +1090,60 @@ def site_settings_view(request):
 
     context = {"form": form}
     return render(request, "app/site_settings.html", context)
+
+@login_required
+def force_change_password_view(request):
+    """
+    View สำหรับหน้าบังคับเปลี่ยนรหัสผ่าน (เวอร์ชันอัปเดต: ใช้ base.html)
+    """
+    try:
+        employee = request.user.employee
+    except Employee.DoesNotExist:
+        # กรณีที่ User ไม่มีโปรไฟล์ Employee (เช่น Superuser ที่ไม่ได้ตั้งค่า)
+        # เราจะถือว่าพวกเขา "ไม่ต้อง" เปลี่ยนรหัส และส่งไปหน้าหลัก
+        # (โค้ดที่ dashboard จะดัก Superuser ที่ต้องเปลี่ยนรหัสอีกที ถ้ามี)
+        return redirect("app:dashboard")
+
+    # ถ้าผู้ใช้เข้ามาหน้านี้ ทั้งๆ ที่ไม่ต้องเปลี่ยนแล้ว ให้ส่งไปหน้าหลัก
+    if not employee.must_change_password and not request.user.is_superuser:
+         return redirect("app:dashboard")
+
+    if request.method == "POST":
+        password_form = CustomPasswordChangeForm(request.user, request.POST)
+        if password_form.is_valid():
+            user = password_form.save()
+            update_session_auth_hash(request, user)
+
+            employee.must_change_password = False
+            employee.save()
+
+            messages.success(request, "เปลี่ยนรหัสผ่านสำเร็จ! คุณสามารถใช้งานระบบได้ตามปกติ")
+            return redirect("app:dashboard")
+        else:
+            messages.error(request, "การเปลี่ยนรหัสผ่านมีข้อผิดพลาด กรุณาลองอีกครั้ง")
+    else:
+        password_form = CustomPasswordChangeForm(user=request.user)
+
+    # เราต้องดึง Context ที่ Navbar (base.html) ต้องใช้
+    try:
+        is_approver = employee.role.role_name.lower() in ['manager', 'supervisor', 'hr', 'safety']
+        approval_inbox_count = ApprovalHistory.objects.filter(approver=employee, status='Pending').count()
+    except Exception:
+        is_approver = False
+        approval_inbox_count = 0
+
+    context = {
+        'password_form': password_form,
+
+        # --- Flag สำหรับ base.html ---
+        'must_change_password_page': True,
+
+        # --- Context สำหรับ Navbar ---
+        'is_hr_or_admin': is_hr_or_admin(request.user),
+        'is_security': is_security(request.user),
+        'is_approver_or_admin': is_approver or is_hr_or_admin(request.user),
+        'approval_inbox_count': approval_inbox_count,
+        'site_config': get_config_data() # (ต้องมี get_config_data() ใน views.py ด้วย)
+    }
+
+    return render(request, "app/force_change_password.html", context)
