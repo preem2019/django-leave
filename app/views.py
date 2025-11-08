@@ -15,7 +15,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.utils import timezone
 
 # --- 4. Local Application Imports ---
-from .forms import EmployeeCreationForm, EmployeeUpdateForm, SiteConfigurationForm
+from .forms import EmployeeCreationForm, EmployeeUpdateForm, SiteConfigurationForm,UserProfileForm
 from .models import LeaveRequest, Employee, ApprovalHistory, InOutHistory, VisitorLog
 from .utils import send_notification_email, send_notification_line
 
@@ -553,6 +553,90 @@ def process_approval(request, history_id):
         history.save()
     return redirect("app:approval-inbox")
 
+@login_required
+def profile_edit_view(request):
+    """
+    View สำหรับให้พนักงานทั่วไปแก้ไขข้อมูลส่วนตัว (Email, Phone, Line ID)
+    """
+    try:
+        # ดึง Employee object ของผู้ใช้ที่ล็อกอินอยู่
+        employee = request.user.employee
+    except Employee.DoesNotExist:
+        messages.error(request, "ไม่พบโปรไฟล์พนักงานที่ผูกกับบัญชีของคุณ")
+        return redirect("app:dashboard")
+
+    if request.method == "POST":
+        form = UserProfileForm(request.POST, instance=employee)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "อัปเดตข้อมูลส่วนตัวเรียบร้อยแล้ว")
+            return redirect("app:profile-edit")  # โหลดหน้าเดิม
+        else:
+            messages.error(request, "ข้อมูลไม่ถูกต้อง กรุณาตรวจสอบและลองอีกครั้ง")
+    else:
+        # ส่ง instance ของ employee เข้าไป เพื่อให้ฟอร์มดึงข้อมูลปัจจุบันมาแสดง
+        form = UserProfileForm(instance=employee)
+    
+    # Context ที่จำเป็นสำหรับ base.html (Navbar)
+    # (จำเป็นต้องมีเพื่อให้เมนูแสดงผลถูกต้อง)
+    try:
+        is_approver = employee.role.role_name.lower() in ['manager', 'supervisor', 'hr', 'safety']
+        approval_inbox_count = ApprovalHistory.objects.filter(approver=employee, status='Pending').count()
+    except Exception:
+        is_approver = False
+        approval_inbox_count = 0
+
+    context = {
+        'form': form,
+        'is_hr_or_admin': is_hr_or_admin(request.user),
+        'is_security': is_security(request.user),
+        'is_approver_or_admin': is_approver or is_hr_or_admin(request.user),
+        'approval_inbox_count': approval_inbox_count,
+    }
+    return render(request, "app/profile_edit.html", context)
+
+# ===== (เพิ่มใหม่) ส่วนของโปรไฟล์พนักงาน =====
+@login_required
+def profile_edit_view(request):
+    """
+    View สำหรับให้พนักงานทั่วไปแก้ไขข้อมูลส่วนตัว (Email, Phone, Line ID)
+    """
+    try:
+        # ดึง Employee object ของผู้ใช้ที่ล็อกอินอยู่
+        employee = request.user.employee
+    except Employee.DoesNotExist:
+        messages.error(request, "ไม่พบโปรไฟล์พนักงานที่ผูกกับบัญชีของคุณ")
+        return redirect("app:dashboard")
+
+    if request.method == "POST":
+        form = UserProfileForm(request.POST, instance=employee)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "อัปเดตข้อมูลส่วนตัวเรียบร้อยแล้ว")
+            return redirect("app:profile-edit")  # โหลดหน้าเดิม
+        else:
+            messages.error(request, "ข้อมูลไม่ถูกต้อง กรุณาตรวจสอบและลองอีกครั้ง")
+    else:
+        # ส่ง instance ของ employee เข้าไป เพื่อให้ฟอร์มดึงข้อมูลปัจจุบันมาแสดง
+        form = UserProfileForm(instance=employee)
+    
+    # Context ที่จำเป็นสำหรับ base.html (Navbar)
+    # (จำเป็นต้องมีเพื่อให้เมนูแสดงผลถูกต้อง)
+    try:
+        is_approver = employee.role.role_name.lower() in ['manager', 'supervisor', 'hr', 'safety']
+        approval_inbox_count = ApprovalHistory.objects.filter(approver=employee, status='Pending').count()
+    except Exception:
+        is_approver = False
+        approval_inbox_count = 0
+
+    context = {
+        'form': form,
+        'is_hr_or_admin': is_hr_or_admin(request.user),
+        'is_security': is_security(request.user),
+        'is_approver_or_admin': is_approver or is_hr_or_admin(request.user),
+        'approval_inbox_count': approval_inbox_count,
+    }
+    return render(request, "app/profile_edit.html", context)
 
 # --- ส่วนของ รปภ. (Security Guard) ---
 @login_required

@@ -1,0 +1,339 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}แก้ไขข้อมูลส่วนตัว{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* (แก้ไข) ลด max-width เพื่อให้การ์ดดูเล็กลง / กระชับขึ้น */
+    .form-container { max-width: 500px; margin: 0 auto; }
+    .form-card { border-radius: 0.75rem; border: none; }
+    
+    /* --- Header Card 1 (สีหลัก) --- */
+    .form-card .card-header-profile {
+        background-color: {{ site_config.color_primary|default:'#3498db' }};
+        color: white;
+        border-top-left-radius: 0.75rem;
+        border-top-right-radius: 0.75rem;
+        padding: 1.5rem;
+        text-align: center;
+    }
+    
+    /* --- Header Card 2 (สีเตือน) --- */
+    .form-card .card-header-password {
+        background-color: {{ site_config.color_warning|default:'#f39c12' }};
+        color: #000; /* สีส้มอ่อน ใช้ตัวหนังสือสีดำจะชัดกว่า */
+        border-top-left-radius: 0.75rem;
+        border-top-right-radius: 0.75rem;
+        padding: 1.5rem;
+        text-align: center;
+    }
+
+    /* --- สไตล์ช่องกรอก (กรอบดำ) --- */
+    .input-group-text {
+        background-color: #e9ecef;
+        border: 1px solid #000; 
+        border-right: 0; 
+        min-width: 42px; 
+        display: flex;
+        justify-content: center;
+    }
+    .form-control {
+        border-color: #000; 
+        /* (ปรับ) ลบ padding-top และ padding-bottom ออก เพื่อใช้ขนาด default */
+    }
+    .form-control:focus, .form-select:focus {
+        box-shadow: 0 0 0 0.25rem rgba(0, 0, 0, 0.25); 
+        border-color: #000; 
+        z-index: 5; 
+    }
+    /* (เพิ่ม) สไตล์สำหรับช่องกรอกที่ผิดพลาด */
+    .form-control.is-invalid {
+        border-color: #dc3545; /* สีแดงสำหรับ error */
+        z-index: 6; /* ให้อยู่เหนือ :focus ธรรมดา */
+    }
+    .form-control.is-invalid:focus {
+        border-color: #dc3545;
+        box-shadow: 0 0 0 0.25rem rgba(220, 53, 69, 0.25);
+    }
+
+    /* (เพิ่ม) สไตล์สำหรับปุ่มสลับแสดงรหัสผ่าน */
+    .btn-toggle-password {
+        border: 1px solid #000;
+        border-left: 0;
+        background-color: #e9ecef;
+        color: #495057;
+        cursor: pointer;
+    }
+    .btn-toggle-password:hover {
+        background-color: #d8dde2;
+    }
+    .btn-toggle-password i {
+        min-width: 20px; /* จัดให้ไอคอนอยู่กึ่งกลาง */
+    }
+    
+    /* --- ปุ่ม "บันทึกข้อมูล" (สีหลัก) --- */
+    .btn-update-profile {
+        background-color: {{ site_config.color_primary|default:'#3498db' }};
+        border-color: {{ site_config.color_primary|default:'#3498db' }};
+        font-weight: 500;
+        padding: 0.75rem;
+        color: white;
+    }
+    .btn-update-profile:hover { 
+        background-color: #2980b9; /* Darker primary */
+        border-color: #2980b9;
+    }
+
+    /* --- ปุ่ม "เปลี่ยนรหัส" (สีเตือน) --- */
+    .btn-update-password {
+        background-color: {{ site_config.color_warning|default:'#f39c12' }};
+        border-color: {{ site_config.color_warning|default:'#f39c12' }};
+        font-weight: 500;
+        padding: 0.75rem;
+        color: #000;
+    }
+    .btn-update-password:hover { 
+        background-color: #e0a800; /* Darker warning */
+        border-color: #e0a800;
+    }
+
+    /* (ปรับ) ลบสไตล์ .btn-lg ที่กำหนดเองออกทั้งหมด */
+
+</style>
+{% endblock %}
+
+{% block breadcrumb %}
+  <a href="{% url 'app:dashboard' %}" class="text-decoration-none text-secondary"><i class="fas fa-home me-2"></i>หน้าหลัก</a>
+  <span class="mx-2">/</span>
+  <span class="text-dark">แก้ไขข้อมูลส่วนตัว</span>
+{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    
+    <!-- ===== การ์ดที่ 1: แก้ไขข้อมูลส่วนตัว ===== -->
+    <div class="card form-card shadow-lg mb-4">
+        <div class="card-header card-header-profile">
+            <h3><i class="fas fa-user-cog me-2"></i>แก้ไขข้อมูลส่วนตัว</h3>
+        </div>
+        <div class="card-body p-4">
+            <!-- (สำคัญ) นี่คือฟอร์มที่ 1 -->
+            <form method="post">
+                {% csrf_token %}
+                
+                {% if profile_form.non_field_errors %}
+                <div class="alert alert-danger text-center" role="alert">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    {% for error in profile_form.non_field_errors %}{{ error }}{% endfor %}
+                </div>
+                {% endif %}
+
+                <h5 class="mb-3">ข้อมูลการติดต่อ (สำหรับรับการแจ้งเตือน)</h5>
+                
+                <div class="mb-3">
+                    <label for="{{ profile_form.email.id_for_label }}" class="form-label fw-bold">{{ profile_form.email.label }}</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-envelope"></i></span>
+                        <!-- (แก้ไข) เอา form-control-lg ออก -->
+                        <input type="email"
+                               name="{{ profile_form.email.html_name }}"
+                               id="{{ profile_form.email.id_for_label }}"
+                               value="{{ profile_form.email.value|default:'' }}"
+                               class="form-control {% if profile_form.email.errors %}is-invalid{% endif %}"
+                               placeholder="example@mail.com"
+                               {% if profile_form.email.field.required %}required{% endif %}>
+                    </div>
+                    {% if profile_form.email.errors %}
+                        <div class="invalid-feedback d-block">{{ profile_form.email.errors|first }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="mb-3">
+                    <label for="{{ profile_form.phone.id_for_label }}" class="form-label fw-bold">{{ profile_form.phone.label }}</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-phone"></i></span>
+                        <!-- (แก้ไข) เอา form-control-lg ออก -->
+                        <input type="tel"
+                               name="{{ profile_form.phone.html_name }}"
+                               id="{{ profile_form.phone.id_for_label }}"
+                               value="{{ profile_form.phone.value|default:'' }}"
+                               class="form-control {% if profile_form.phone.errors %}is-invalid{% endif %}"
+                               placeholder="เช่น 081xxxxxxx"
+                               {% if profile_form.phone.field.required %}required{% endif %}>
+                    </div>
+                    {% if profile_form.phone.errors %}
+                        <div class="invalid-feedback d-block">{{ profile_form.phone.errors|first }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="mb-3">
+                    <label for="{{ profile_form.line_user_id.id_for_label }}" class="form-label fw-bold">{{ profile_form.line_user_id.label }}</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fab fa-line" style="color: #06C755;"></i></span>
+                        <!-- (แก้ไข) เอา form-control-lg ออก -->
+                         <input type="text"
+                               name="{{ profile_form.line_user_id.html_name }}"
+                               id="{{ profile_form.line_user_id.id_for_label }}"
+                               value="{{ profile_form.line_user_id.value|default:'' }}"
+                               class="form-control {% if profile_form.line_user_id.errors %}is-invalid{% endif %}"
+                               placeholder="Line User ID (สำหรับรับแจ้งเตือน)"
+                               {% if profile_form.line_user_id.field.required %}required{% endif %}>
+                    </div>
+                    <small class="form-text text-muted mt-1">ใช้สำหรับส่งการแจ้งเตือนผ่าน Line (หากต้องการ)</small>
+                    {% if profile_form.line_user_id.errors %}
+                        <div class="invalid-feedback d-block">{{ profile_form.line_user_id.errors|first }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="d-grid mt-4">
+                    <!-- (ปรับ) เอา btn-lg ออกเพื่อให้ขนาดเป็นปกติ -->
+                    <button type="submit" class="btn btn-update-profile" name="action" value="update_profile">
+                        <i class="fas fa-save me-2"></i>บันทึกการเปลี่ยนแปลง
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- ===== การ์ดที่ 2: เปลี่ยนรหัสผ่าน ===== -->
+    <div class="card form-card shadow-lg">
+        <div class="card-header card-header-password">
+            <h3><i class="fas fa-key me-2"></i>เปลี่ยนรหัสผ่าน</h3>
+        </div>
+        <div class="card-body p-4">
+            <!-- (สำคัญ) นี่คือฟอร์มที่ 2 -->
+            <form method="post">
+                {% csrf_token %}
+
+                {% if password_form.non_field_errors %}
+                    <div class="alert alert-danger text-center">
+                    {% for error in password_form.non_field_errors %}
+                        <i class="fas fa-exclamation-triangle me-2"></i> {{ error }}
+                    {% endfor %}
+                    </div>
+                {% endif %}
+
+                <!-- Field: รหัสผ่านปัจจุบัน -->
+                <div class="mb-3">
+                    <label for="{{ password_form.old_password.id_for_label }}" class="form-label fw-bold">{{ password_form.old_password.label }}</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-lock-open"></i></span>
+                        <!-- (แก้ไข) เอา form-control-lg ออก -->
+                        <input type="password"
+                               name="{{ password_form.old_password.html_name }}"
+                               id="{{ password_form.old_password.id_for_label }}"
+                               class="form-control {% if password_form.old_password.errors %}is-invalid{% endif %}"
+                               placeholder="กรอกรหัสผ่านปัจจุบัน"
+                               required>
+                        <!-- (เพิ่ม) ปุ่มสลับรหัสผ่าน -->
+                        <button class="btn btn-toggle-password" type="button" id="toggle-old_password">
+                            <i class="fas fa-eye-slash"></i>
+                        </button>
+                    </div>
+                    {% if password_form.old_password.errors %}
+                        <div class="invalid-feedback d-block">{{ password_form.old_password.errors|first }}</div>
+                    {% endif %}
+                </div>
+
+                <!-- Field: รหัสผ่านใหม่ -->
+                <div class="mb-3">
+                    <label for="{{ password_form.new_password1.id_for_label }}" class="form-label fw-bold">{{ password_form.new_password1.label }}</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                        <!-- (แก้ไข) เอา form-control-lg ออก -->
+                        <input type="password"
+                               name="{{ password_form.new_password1.html_name }}"
+                               id="{{ password_form.new_password1.id_for_label }}"
+                               class="form-control {% if password_form.new_password1.errors %}is-invalid{% endif %}"
+                               placeholder="กรอกรหัสผ่านใหม่"
+                               required>
+                        <!-- (เพิ่ม) ปุ่มสลับรหัสผ่าน -->
+                        <button class="btn btn-toggle-password" type="button" id="toggle-new_password1">
+                            <i class="fas fa-eye-slash"></i>
+                        </button>
+                    </div>
+                    {% if password_form.new_password1.errors %}
+                        <div class="invalid-feedback d-block">{{ password_form.new_password1.errors|first }}</div>
+                    {% endif %}
+                    <!-- (เพิ่ม) แสดง help text (ถ้ามี) -->
+                    {% if password_form.new_password1.help_text %}
+                        <small class="form-text text-muted mt-1">{{ password_form.new_password1.help_text|safe }}</small>
+                    {% endif %}
+                </div>
+
+                <!-- Field: ยืนยันรหัสผ่านใหม่ -->
+                <div class="mb-3">
+                    <label for="{{ password_form.new_password2.id_for_label }}" class="form-label fw-bold">{{ password_form.new_password2.label }}</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-lock"></i></span>
+                        <!-- (แก้ไข) เอา form-control-lg ออก -->
+                        <input type="password"
+                               name="{{ password_form.new_password2.html_name }}"
+                               id="{{ password_form.new_password2.id_for_label }}"
+                               class="form-control {% if password_form.new_password2.errors %}is-invalid{% endif %}"
+                               placeholder="ยืนยันรหัสผ่านใหม่"
+                               required>
+                        <!-- (เพิ่ม) ปุ่มสลับรหัสผ่าน -->
+                        <button class="btn btn-toggle-password" type="button" id="toggle-new_password2">
+                            <i class="fas fa-eye-slash"></i>
+                        </button>
+                    </div>
+                    {% if password_form.new_password2.errors %}
+                        <div class="invalid-feedback d-block">{{ password_form.new_password2.errors|first }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="d-grid mt-4">
+                    <!-- (ปรับ) เอา btn-lg ออกเพื่อให้ขนาดเป็นปกติ -->
+                    <button type="submit" class="btn btn-update-password" name="action" value="change_password">
+                        <i class="fas fa-check-circle me-2"></i>ยืนยันการเปลี่ยนรหัสผ่าน
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+</div>
+
+<!-- (เพิ่ม) สคริปต์สำหรับสลับการแสดงรหัสผ่าน -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // ฟังก์ชันสำหรับสลับช่องรหัสผ่าน
+    function togglePasswordVisibility(inputId, toggleButtonId) {
+        const passwordInput = document.getElementById(inputId);
+        const toggleButton = document.getElementById(toggleButtonId);
+
+        // ตรวจสอบว่า element ทั้งสองมีอยู่จริง
+        if (!passwordInput || !toggleButton) {
+            console.warn(`Could not find elements for password toggle: ${inputId}, ${toggleButtonId}`);
+            return;
+        }
+
+        const icon = toggleButton.querySelector('i');
+        if (!icon) return;
+
+        toggleButton.addEventListener('click', function() {
+            // สลับประเภท input
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+            
+            // สลับไอคอน
+            if (type === 'password') {
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            } else {
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            }
+        });
+    }
+
+    // เปิดใช้งานสำหรับทั้ง 3 ช่อง
+    // เราใช้ id_for_label ของ Django เพื่อความแม่นยำ
+    togglePasswordVisibility('{{ password_form.old_password.id_for_label }}', 'toggle-old_password');
+    togglePasswordVisibility('{{ password_form.new_password1.id_for_label }}', 'toggle-new_password1');
+    togglePasswordVisibility('{{ password_form.new_password2.id_for_label }}', 'toggle-new_password2');
+});
+</script>
+{% endblock %}

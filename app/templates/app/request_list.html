@@ -12,6 +12,136 @@
     .timeline-content { padding-top: 5px; }
     .timeline-content blockquote { font-size: 0.9rem; background-color: #f8f9fa; border-left: 5px solid #e9ecef; padding: 0.5rem 1rem; margin-top: 0.5rem; margin-left: 0; }
     .modal-body ul { padding-left: 20px; }
+
+    /* 1. สไตล์สำหรับแก้ปัญหาเหตุผลยาว "ในตาราง" (สำหรับ Desktop) */
+    .reason-cell {
+        word-break: break-all;
+        max-width: 250px;
+        white-space: normal;
+    }
+
+    /* 2. สไตล์สำหรับแก้ปัญหาเหตุผลยาว "ใน Modal Popup" */
+    .modal-body li,
+    .modal-body blockquote {
+        word-wrap: break-word;
+        word-break: break-all;
+        white-space: normal;
+    }
+
+    /* 3. จัดข้อมูลในตารางให้ชิดบน (สำหรับ Desktop) */
+    .table tbody td {
+        vertical-align: top;
+        padding-top: 1rem;
+        padding-bottom: 1rem;
+    }
+
+    /* 4. ทำให้หัวตารางยังอยู่กึ่งกลาง (สำหรับ Desktop) */
+    .table thead th {
+        vertical-align: middle;
+    }
+
+    /* ===== (แก้ไข) 5. เพิ่มเส้นขอบ บน-ล่าง สี Primary (สำหรับ Desktop) ===== */
+    .table > thead {
+        /* (เพิ่ม) ทำให้เส้นขอบล่างหัวตารางเป็นสี Primary และหนาขึ้น */
+        border-bottom: 2px solid rgba(0, 0, 0, 1);
+    }
+    .table > tbody > tr {
+        /* (แก้ไข) เปลี่ยนเป็นเส้นขอบสี Primary ทั้งบนและล่าง */
+        border-top: 1px solid rgba(0, 0, 0, 1);
+        border-bottom: 1px solid rgba(0, 0, 0, 1);
+    }
+    /* (เพิ่ม) เอาเส้นขอบบนของ "แถวแรก" ออก (จะได้ไม่ชนกับหัวตาราง) */
+    .table > tbody > tr:first-child {
+        border-top: none;
+    }
+    /* =============================================================== */
+
+
+    /* ===== 6. โค้ดสำหรับทำให้ตาราง Responsive บนมือถือ ===== */
+    @media (max-width: 767.98px) {
+        /* ซ่อนหัวตาราง */
+        .table thead {
+            display: none;
+        }
+        
+        /* บังคับให้ตารางและส่วนต่างๆ แสดงเป็น block */
+        .table, .table tbody, .table tr, .table td {
+            display: block;
+            width: 100%;
+        }
+        
+        /* ทำให้แถว (tr) กลายเป็นการ์ด */
+        .table tr {
+            margin-bottom: 1rem;
+            /* (คงเดิม) สีเส้นขอบการ์ดมือถือ เป็นสี Primary */
+            border: 1px solid rgba(0, 0, 0, 1);
+            border-radius: 0.375rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.60);
+            overflow: hidden; 
+        }
+        
+        .table tbody td {
+            display: block;
+            width: 100%;
+            text-align: right !important; /* บังคับชิดขวา */
+            padding-left: 50%; /* เว้นที่ให้หัวข้อ */
+            position: relative;
+            /* (คงเดิม) เส้นแบ่ง "ภายใน" การ์ดมือถือ เป็นสีเทา */
+            border-top: 1px solid #dee2e6;
+            padding-top: 0.75rem;
+            padding-bottom: 0.75rem;
+        }
+
+        /* (คงเดิม) ซ่อนเส้นขอบของ td อันแรก */
+        .table tr td:first-child {
+            border-top: none;
+        }
+
+        /* เพิ่มหัวข้อ (data-label) เข้าไปก่อนข้อมูล */
+        .table td::before {
+            content: attr(data-label);
+            position: absolute;
+            left: 0.75rem;
+            width: 45%;
+            padding-right: 0.5rem;
+            font-weight: bold;
+            text-align: left !important;
+            white-space: nowrap;
+        }
+
+        /* (สำคัญ) ทำให้ช่อง "เหตุผล" ชิดซ้ายเหมือนเดิม */
+        .table td.reason-cell {
+            text-align: left !important;
+        }
+        
+        /* (สำคัญ) ทำให้ช่อง "เหตุผล" กว้างเต็ม 100% บนมือถือ */
+        .reason-cell {
+            max-width: 100%;
+        }
+
+        /* (สำคัญ) จัดการปุ่ม "การจัดการ" */
+        .table td.actions-cell {
+            padding-top: 0.75rem;
+            padding-bottom: 0.75rem;
+        }
+        .table td.actions-cell::before {
+            display: none;
+        }
+
+        /* (สำคัญ) จัดการแถว "ไม่พบข้อมูล" */
+        .table tr.empty-row td {
+            text-align: center !important;
+            padding-left: 0.75rem;
+            border-top: none; 
+        }
+        /* (เพิ่ม) แถว "ไม่พบข้อมูล" บนมือถือ ให้ไม่มีขอบ */
+        .table tr.empty-row {
+            border: none;
+            box-shadow: none;
+        }
+    }
+    /* ===== (สิ้นสุด) โค้ดสำหรับ Responsive ===== */
+
 </style>
 {% endblock %}
 
@@ -33,35 +163,37 @@
     <div class="card shadow-sm">
         <div class="card-body">
             <div class="table-responsive">
-                <table class="table table-hover align-middle">
+                <table class="table table-hover">
                     <thead class="table-light text-center">
                         <tr>
                             <th>รหัสคำขอ</th>
                             <th>วันที่ขออนุญาต</th>
                             <th>ระยะเวลา</th>
-                            <th class="text-start">เหตุผล</th>
+                            <th>เหตุผล</th> 
                             <th>สถานะ</th>
                             <th>วันที่ยื่นเรื่อง</th> 
-                            <th>การจัดการ</th> </tr>
+                            <th>การจัดการ</th> 
+                        </tr>
                     </thead>
                     <tbody class="text-center">
                         {% for request in requests %}
                         <tr data-bs-toggle="modal" data-bs-target="#detailModal-{{ request.request_id }}">
                             
-                            <td>{{ request.request_id }}</td>
-                            <td>{{ request.leave_date|date:"d/m/Y" }}</td>
-                            <td>{{ request.get_leave_duration_display }}</td>
-                            <td class="text-start">{{ request.reason|truncatewords:15 }}</td>
-                            <td>
+                            <td data-label="รหัสคำขอ">{{ request.request_id }}</td>
+                            <td data-label="วันที่ขออนุญาต">{{ request.leave_date|date:"d/m/Y" }}</td>
+                            <td data-label="ระยะเวลา">{{ request.get_leave_duration_display }}</td>
+                            <td data-label="เหตุผล" class="text-start reason-cell">{{ request.reason|truncatewords:15 }}</td>
+                            <td data-label="สถานะ">
                                 {% with detailed_status=request.get_detailed_status %}
                                     <span class="badge bg-{{ detailed_status.color }} {% if detailed_status.color == 'warning' or detailed_status.color == 'info' %}text-dark{% endif %}">
                                         {{ detailed_status.text }}
                                     </span>
                                 {% endwith %}
                             </td>
-                            <td>{{ request.request_datetime|date:"d/m/Y H:i" }}</td>
+                            <td data-label="วันที่ยื่นเรื่อง">{{ request.request_datetime|date:"d/M/Y H:i" }}</td>
 
-                            <td onclick="event.stopPropagation();"> {% if request.status == 'Pending' or request.status == 'Info Requested' %}
+                            <td class="actions-cell" onclick="event.stopPropagation();"> 
+                                {% if request.status == 'Pending' or request.status == 'Info Requested' %}
                                     <button type="button" class="btn btn-sm btn-danger" 
                                             data-bs-toggle="modal" 
                                             data-bs-target="#cancelModal-{{ request.request_id }}">
@@ -77,7 +209,9 @@
                             </td>
                         </tr>
                         {% empty %}
-                        <tr><td colspan="7" class="text-center p-5"><p class="text-muted">ไม่พบรายการคำขอ</p></td></tr>
+                        <tr class="empty-row">
+                            <td colspan="7" class="text-center p-5"><p class="text-muted">ไม่พบรายการคำขอ</p></td>
+                        </tr>
                         {% endfor %}
                     </tbody>
                 </table>
@@ -86,6 +220,7 @@
     </div>
 </div>
 
+<!-- (โค้ดส่วน Modal เหมือนเดิม ไม่มีการแก้ไข) -->
 {% for request in requests %}
 <div class="modal fade" id="detailModal-{{ request.request_id }}" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
@@ -173,7 +308,7 @@
                                       id="cancel_reason_{{ request.request_id }}" 
                                       name="cancel_reason" 
                                       rows="3" 
-                                      placeholder="เช่น พิมพ์วันที่ผิด, ลูกค้ายกเลิกนัด ฯลฯ" 
+                                      placeholder="เช่น พิมพ์วันที่ผิด, ลูกค้ายกเลิกนัด ฯ" 
                                       required></textarea>
                         </div>
                     </div>

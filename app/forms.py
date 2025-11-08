@@ -1,5 +1,5 @@
 from django import forms
-from django.contrib.auth.forms import AuthenticationForm
+from django.contrib.auth.forms import AuthenticationForm, PasswordChangeForm
 from django.contrib.auth.models import User
 from .models import Employee, Department, Position, Role
 
@@ -104,3 +104,68 @@ class SiteConfigurationForm(forms.Form):
     color_success = forms.CharField(label='สีสำเร็จ (อนุมัติ, บันทึก)', widget=forms.TextInput(attrs={'type': 'color'}), max_length=7)
     color_warning = forms.CharField(label='สีรอ/เตือน (รออนุมัติ)', widget=forms.TextInput(attrs={'type': 'color'}), max_length=7)
     color_danger = forms.CharField(label='สีอันตราย (ปฏิเสธ, ลบ)', widget=forms.TextInput(attrs={'type': 'color'}), max_length=7)
+
+# ===== ⬇️ 5. (เพิ่มใหม่) ฟอร์มสำหรับ "แก้ไขข้อมูลส่วนตัว" (สำหรับพนักงานทั่วไป) =====
+class UserProfileForm(forms.ModelForm):
+    # เพิ่ม field email จาก Model 'User'
+    email = forms.EmailField(
+        label="อีเมล (สำหรับรับการแจ้งเตือน)",
+        required=False,
+        widget=forms.EmailInput(attrs={'class': 'form-control form-control-lg'})
+    )
+
+    class Meta:
+        model = Employee
+        # ระบุ field จาก Model 'Employee' ที่อนุญาตให้แก้ไข
+        fields = ['phone', 'line_user_id']
+        widgets = {
+            'phone': forms.TextInput(attrs={'class': 'form-control form-control-lg', 'placeholder': 'เช่น 081xxxxxxx'}),
+            'line_user_id': forms.TextInput(attrs={'class': 'form-control form-control-lg', 'placeholder': 'Line User ID (สำหรับรับแจ้งเตือน)'}),
+        }
+        labels = {
+            'phone': 'เบอร์โทรศัพท์ (ไม่บังคับ)',
+            'line_user_id': 'Line User ID (ไม่บังคับ)',
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # ดึงค่า email ปัจจุบันจาก User model มาแสดงในฟอร์ม
+        if self.instance and self.instance.user:
+            self.fields['email'].initial = self.instance.user.email
+
+    def save(self, commit=True):
+        # บันทึก field 'phone' และ 'line_user_id' ลง Model 'Employee'
+        employee = super().save(commit=False)
+
+        # บันทึก field 'email' ลง Model 'User'
+        if self.instance and self.instance.user:
+            user = self.instance.user
+            user.email = self.cleaned_data['email']
+            # อัปเดต email ใน Employee ให้ตรงกันด้วย (เพื่อความสอดคล้อง)
+            employee.email = self.cleaned_data['email']
+            if commit:
+                user.save()
+
+        if commit:
+            employee.save()
+        return employee
+    
+# ===== ⬇️ 6. ฟอร์มสำหรับ "เปลี่ยนรหัสผ่าน" =====
+class CustomPasswordChangeForm(PasswordChangeForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        # กำหนดสไตล์กรอบสีดำและ Bootstrap
+        common_attrs = {
+            'class': 'form-control form-control-lg',
+            'style': 'border-color: #000;'
+        }
+
+        self.fields['old_password'].widget = forms.PasswordInput(attrs={**common_attrs, 'placeholder': 'กรอกรหัสผ่านปัจจุบัน'})
+        self.fields['old_password'].label = "รหัสผ่านปัจจุบัน"
+        
+        self.fields['new_password1'].widget = forms.PasswordInput(attrs={**common_attrs, 'placeholder': 'กรอกรหัสผ่านใหม่'})
+        self.fields['new_password1'].label = "รหัสผ่านใหม่"
+
+        self.fields['new_password2'].widget = forms.PasswordInput(attrs={**common_attrs, 'placeholder': 'ยืนยันรหัสผ่านใหม่'})
+        self.fields['new_password2'].label = "ยืนยันรหัสผ่านใหม่"

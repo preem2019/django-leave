@@ -8,7 +8,10 @@ app_name = 'app'
 urlpatterns = [
     # --- หน้าหลัก ---
     path('', views.dashboard, name='dashboard'),
-
+    
+    # --- URL สำหรับโปรไฟล์ ---
+    path('profile/', views.profile_edit_view, name='profile-edit'),
+    
     # --- URL สำหรับการจัดการคำขอ (สำหรับพนักงาน) ---
     path('request/new/', views.create_leave_request, name='create-request'),
     path('requests/pending/', views.pending_requests_view, name='requests-pending'),

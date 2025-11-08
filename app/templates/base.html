@@ -27,67 +27,81 @@
         <div class="container-fluid">
             <a class="navbar-brand fw-bold" href="{% url 'app:dashboard' %}">{{ site_config.brand_name|default:'eLeave' }}</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"><span class="navbar-toggler-icon"></span></button>
-            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
             
-            {% if not is_security %}
-            <li class="nav-item">
-                <a class="nav-link active" href="{% url 'app:dashboard' %}"><i class="fas fa-home me-1"></i>หน้าหลัก</a>
-            </li>
-
-            {% if user.is_authenticated %}
-            <li class="nav-item dropdown">
-                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">ระบบขออนุญาต</a>
-                <ul class="dropdown-menu">
-                    <li><a class="dropdown-item" href="{% url 'app:create-request' %}">ยื่นคำขออนุญาต</a></li>
-                    <li><hr class="dropdown-divider"></li>
-                    <li><a class="dropdown-item" href="{% url 'app:requests-pending' %}">ประวัติคำขอ (รออนุมัติ)</a></li>
-                    <li><a class="dropdown-item" href="{% url 'app:requests-approved' %}">ประวัติคำขอ (อนุมัติแล้ว)</a></li>
-                    <li><a class="dropdown-item" href="{% url 'app:requests-rejected' %}">ประวัติคำขอ (ถูกปฏิเสธ)</a></li>
-                </ul>
-            </li>
-            {% endif %}
-            {% endif %} 
+            <!-- (แก้ไข) เพิ่ม div .collapse.navbar-collapse หุ้มเมนูทั้งหมด -->
+            <div class="collapse navbar-collapse" id="navbarNav">
             
-            {% if is_approver_or_admin %}
-            <li class="nav-item">
-                        <a class="nav-link" href="{% url 'app:approval-inbox' %}">
-                            <i class="fas fa-check-to-slot me-1"></i>กล่องงานอนุมัติ
-                            {% if approval_inbox_count > 0 %}<span class="badge bg-danger rounded-pill">{{ approval_inbox_count }}</span>{% endif %}
-                        </a>
-                    </li>
-                    {% endif %}
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                
+                {% if not is_security %}
+                <li class="nav-item">
+                    <a class="nav-link active" href="{% url 'app:dashboard' %}"><i class="fas fa-home me-1"></i>หน้าหลัก</a>
+                </li>
 
-                    {% if is_security %}
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'app:security-dashboard' %}"><i class="fas fa-shield-alt me-1"></i>จุดตรวจสอบ รปภ.</a>
-                    </li>
-                    {% endif %}
+                {% if user.is_authenticated %}
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">ระบบขออนุญาต</a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="{% url 'app:create-request' %}">ยื่นคำขออนุญาต</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="{% url 'app:requests-pending' %}">ประวัติคำขอ (รออนุมัติ)</a></li>
+                        <li><a class="dropdown-item" href="{% url 'app:requests-approved' %}">ประวัติคำขอ (อนุมัติแล้ว)</a></li>
+                        <li><a class="dropdown-item" href="{% url 'app:requests-rejected' %}">ประวัติคำขอ (ถูกปฏิเสธ)</a></li>
+                    </ul>
+                </li>
+                {% endif %}
+                {% endif %} 
+                
+                {% if is_approver_or_admin %}
+                <li class="nav-item">
+                            <a class="nav-link" href="{% url 'app:approval-inbox' %}">
+                                <i class="fas fa-check-to-slot me-1"></i>กล่องงานอนุมัติ
+                                {% if approval_inbox_count > 0 %}<span class="badge bg-danger rounded-pill">{{ approval_inbox_count }}</span>{% endif %}
+                            </a>
+                        </li>
+                        {% endif %}
 
-                    {% if is_hr_or_admin %}
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown"><i class="fas fa-cog me-1"></i>ส่วนผู้ดูแลระบบ</a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="{% url 'app:employee-list' %}">จัดการพนักงาน</a></li>
-                            <li><a class="dropdown-item" href="{% url 'app:create-user' %}">สร้างพนักงานใหม่</a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="{% url 'app:in-out-history-report' %}">รายงานการเข้า-ออก</a></li>
+                        {% if is_security %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'app:security-dashboard' %}"><i class="fas fa-shield-alt me-1"></i>จุดตรวจสอบ รปภ.</a>
+                        </li>
+                        {% endif %}
 
-                            <li><a class="dropdown-item" href="{% url 'app:statistics-view' %}">สรุปสถิติ (Dashboard)</a></li>
-                            </ul>
-                    </li>
-                    {% endif %}
+                        {% if is_hr_or_admin %}
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown"><i class="fas fa-cog me-1"></i>ส่วนผู้ดูแลระบบ</a>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="{% url 'app:employee-list' %}">จัดการพนักงาน</a></li>
+                                <li><a class="dropdown-item" href="{% url 'app:create-user' %}">สร้างพนักงานใหม่</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="{% url 'app:in-out-history-report' %}">รายงานการเข้า-ออก</a></li>
+
+                                <li><a class="dropdown-item" href="{% url 'app:statistics-view' %}">สรุปสถิติ (Dashboard)</a></li>
+                                </ul>
+                        </li>
+                        {% endif %}
                 </ul>
 
                 <div class="d-flex align-items-center">
                     {% if user.is_authenticated %}
-                      <span class="navbar-text me-3">สวัสดี, {{ user.first_name|default:user.username }}!</span>
-                      <form class="logout-form d-inline" action="{% url 'app:logout' %}" method="post">
-                        {% csrf_token %}
-                        <button type="submit" class="btn"><i class="fas fa-sign-out-alt me-1"></i>ออกจากระบบ</button>
-                      </form>
+                        <span class="navbar-text me-3">สวัสดี, {{ user.first_name|default:user.username }}!</span>
+                        
+                        {% if not is_security %}
+                        <a href="{% url 'app:profile-edit' %}" 
+                            class="btn btn-sm me-3" 
+                            style="color: rgba(255, 255, 255, 0.75); --bs-btn-hover-color: #fff; --bs-btn-active-color: #fff;">
+                            <i class="fas fa-user-cog me-1"></i>โปรไฟล์
+                        </a>
+                        {% endif %}
+                        <form class="logout-form d-inline" action="{% url 'app:logout' %}" method="post">
+                            {% csrf_token %}
+                            <button type="submit" class="btn"><i class="fas fa-sign-out-alt me-1"></i>ออกจากระบบ</button>
+                        </form>
                     {% endif %}
                 </div>
-            </div>
+            
+            </div> <!-- (แก้ไข) ปิด div .collapse -->
+            
         </div>
     </nav>
 
