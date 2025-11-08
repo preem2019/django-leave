@@ -8,6 +8,7 @@ import openpyxl
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib.auth import update_session_auth_hash
 from django.db.models import Q, Count, DateField
 from django.db.models.functions import TruncMonth, Cast
 from django.http import HttpResponse
@@ -600,28 +601,46 @@ def profile_edit_view(request):
 def profile_edit_view(request):
     """
     View สำหรับให้พนักงานทั่วไปแก้ไขข้อมูลส่วนตัว (Email, Phone, Line ID)
+    และเปลี่ยนรหัสผ่าน
     """
     try:
-        # ดึง Employee object ของผู้ใช้ที่ล็อกอินอยู่
         employee = request.user.employee
     except Employee.DoesNotExist:
         messages.error(request, "ไม่พบโปรไฟล์พนักงานที่ผูกกับบัญชีของคุณ")
         return redirect("app:dashboard")
 
+    # กำหนดฟอร์มทั้งสองไว้ก่อน
+    profile_form = UserProfileForm(instance=employee)
+    password_form = CustomPasswordChangeForm(user=request.user)
+
     if request.method == "POST":
-        form = UserProfileForm(request.POST, instance=employee)
-        if form.is_valid():
-            form.save()
-            messages.success(request, "อัปเดตข้อมูลส่วนตัวเรียบร้อยแล้ว")
-            return redirect("app:profile-edit")  # โหลดหน้าเดิม
-        else:
-            messages.error(request, "ข้อมูลไม่ถูกต้อง กรุณาตรวจสอบและลองอีกครั้ง")
-    else:
-        # ส่ง instance ของ employee เข้าไป เพื่อให้ฟอร์มดึงข้อมูลปัจจุบันมาแสดง
-        form = UserProfileForm(instance=employee)
-    
+        # ตรวจสอบว่าปุ่มไหนถูกกด จาก attribute 'name' ของปุ่ม submit
+        
+        # --- กรณีที่ 1: ผู้ใช้กดปุ่ม "บันทึกการเปลี่ยนแปลง" (ข้อมูลส่วนตัว) ---
+        if "action" in request.POST and request.POST["action"] == "update_profile":
+            profile_form = UserProfileForm(request.POST, instance=employee)
+            if profile_form.is_valid():
+                profile_form.save()
+                messages.success(request, "อัปเดตข้อมูลส่วนตัวเรียบร้อยแล้ว")
+                return redirect("app:profile-edit")
+            else:
+                messages.error(request, "ข้อมูลส่วนตัวไม่ถูกต้อง กรุณาตรวจสอบ")
+
+        # --- กรณีที่ 2: ผู้ใช้กดปุ่ม "ยืนยันการเปลี่ยนรหัสผ่าน" ---
+        elif "action" in request.POST and request.POST["action"] == "change_password":
+            password_form = CustomPasswordChangeForm(request.user, request.POST)
+            if password_form.is_valid():
+                user = password_form.save()
+                # สำคัญมาก: ต้องอัปเดต session เพื่อไม่ให้ผู้ใช้หลุดออกจากระบบ
+                update_session_auth_hash(request, user)  
+                messages.success(request, "เปลี่ยนรหัสผ่านเรียบร้อยแล้ว")
+                return redirect("app:profile-edit")
+            else:
+                # ไม่ต้องแสดง error "ข้อมูลไม่ถูกต้อง" ซ้ำ
+                # ตัวฟอร์ม `password_form` จะแสดง error ของมันเอง (เช่น รหัสเก่าผิด, รหัสใหม่ไม่ตรงกัน)
+                pass 
+
     # Context ที่จำเป็นสำหรับ base.html (Navbar)
-    # (จำเป็นต้องมีเพื่อให้เมนูแสดงผลถูกต้อง)
     try:
         is_approver = employee.role.role_name.lower() in ['manager', 'supervisor', 'hr', 'safety']
         approval_inbox_count = ApprovalHistory.objects.filter(approver=employee, status='Pending').count()
@@ -630,14 +649,14 @@ def profile_edit_view(request):
         approval_inbox_count = 0
 
     context = {
-        'form': form,
+        'profile_form': profile_form,   # ⬅️ ส่งฟอร์มที่ 1
+        'password_form': password_form, # ⬅️ ส่งฟอร์มที่ 2
         'is_hr_or_admin': is_hr_or_admin(request.user),
         'is_security': is_security(request.user),
         'is_approver_or_admin': is_approver or is_hr_or_admin(request.user),
         'approval_inbox_count': approval_inbox_count,
     }
     return render(request, "app/profile_edit.html", context)
-
 # --- ส่วนของ รปภ. (Security Guard) ---
 @login_required
 @user_passes_test(is_security, login_url="/")
