@@ -1,40 +1,55 @@
+import json
+import os
+from django.conf import settings  # ⬅️ (เพิ่ม)
 from django.shortcuts import redirect
 from django.urls import reverse
 from django.contrib import messages
-from .models import Employee # ⬅️ เพิ่ม import นี้
+from .models import Employee
+
+CONFIG_FILE_PATH = os.path.join(settings.BASE_DIR, "site_config.json")
+
 
 class ForcePasswordChangeMiddleware:
     def __init__(self, get_response):
         self.get_response = get_response
 
     def __call__(self, request):
-        # 1. ถ้ายังไม่ login หรือเป็น superuser ก็ปล่อยผ่าน (Superuser ไม่ควรถูกบังคับ)
+        try:
+            with open(CONFIG_FILE_PATH, "r", encoding="utf-8") as f:
+                config = json.load(f)
+            # .get(..., True) หมายความว่า ถ้ายังไม่มีคีย์นี้ในไฟล์ ให้ถือว่า "เปิดใช้งาน" (True) เป็นค่าเริ่มต้น
+            is_feature_enabled = config.get("force_password_change_enabled", True)
+        except (FileNotFoundError, json.JSONDecodeError):
+            is_feature_enabled = True  # ถ้าไฟล์ config เจ๊ง ให้เปิดใช้งานไว้ก่อน (ปลอดภัย)
+
+        # 2. ถ้าฟีเจอร์นี้ถูก "ปิด" ให้ออกจาก middleware นี้ไปเลย
+        if not is_feature_enabled:
+            return self.get_response(request)
+        # --- ⬆️ (สิ้นสุดส่วนที่เพิ่ม) ⬆️ ---
+
+        # 3. (ตรรกะเดิม) ถ้าฟีเจอร์เปิดอยู่ ก็ให้ทำงานตรวจสอบตามปกติ
         if not request.user.is_authenticated or request.user.is_superuser:
             return self.get_response(request)
 
-        # 2. ถ้าไม่มี profile employee (อาจจะยัง setup ไม่เสร็จ) ก็ปล่อยผ่าน
         try:
             employee_profile = request.user.employee
         except Employee.DoesNotExist:
-             return self.get_response(request)
+            return self.get_response(request)
 
-        # 3. ตรวจสอบว่าต้องเปลี่ยนรหัสผ่านหรือไม่
         if employee_profile.must_change_password:
-            
-            # 4. ตรวจสอบว่าหน้าทีกำลังจะไป คือหน้า "บังคับเปลี่ยนรหัส" หรือ "logout" หรือไม่
-            force_change_url = reverse('app:force-change-password')
-            logout_url = reverse('app:logout')
-            
-            # อนุญาตให้เข้าถึงหน้า media (สำหรับไฟล์ CSS/JS รูปภาพ)
-            if (request.path.startswith(force_change_url) or 
-                request.path.startswith(logout_url) or
-                request.path.startswith('/media/')): # ⬅️ เพิ่มเงื่อนไขนี้
-                
-                return self.get_response(request) # 6. ถ้าใช่ ก็ปล่อยผ่าน
-            
-            # 5. ถ้าไม่ใช่, ให้ redirect ไปหน้าบังคับเปลี่ยนรหัส
+
+            force_change_url = reverse("app:force-change-password")
+            logout_url = reverse("app:logout")
+
+            if (
+                request.path.startswith(force_change_url)
+                or request.path.startswith(logout_url)
+                or request.path.startswith("/media/")
+            ):
+
+                return self.get_response(request)
+
             messages.warning(request, "กรุณาเปลี่ยนรหัสผ่านเริ่มต้นของคุณก่อนเข้าใช้งาน")
             return redirect(force_change_url)
-        
-        # 7. ถ้าเงื่อนไขไม่ตรง (ไม่ต้องเปลี่ยนรหัส) ก็ไปหน้าถัดไปตามปกติ
+
         return self.get_response(request)

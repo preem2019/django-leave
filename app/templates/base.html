@@ -83,6 +83,8 @@
                                 <li><a class="dropdown-item" href="{% url 'app:in-out-history-report' %}">รายงานการเข้า-ออก</a></li>
 
                                 <li><a class="dropdown-item" href="{% url 'app:statistics-view' %}">สรุปสถิติ (Dashboard)</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="{% url 'app:site-settings' %}">ตั้งค่าเว็บไซต์</a></li>
                                 </ul>
                         </li>
                         {% endif %}
@@ -98,11 +100,20 @@
                         
                         {% if not must_change_password_page %}
                             {% if not is_security %}
+                            
                             <a href="{% url 'app:profile-edit' %}" 
                                 class="btn btn-sm me-3" 
-                                style="color: rgba(255, 255, 255, 0.75); --bs-btn-hover-color: #fff; --bs-btn-active-color: #fff;">
+                                style="color: rgba(255, 255, 255, 0.75); ...">
                                 <i class="fas fa-user-cog me-1"></i>โปรไฟล์
                             </a>
+                            
+                            {% if is_approver_or_admin %}
+                            <a href="{% url 'app:set-delegation' %}" 
+                                class="btn btn-sm me-3" 
+                                style="color: rgba(255, 255, 255, 0.75); ...">
+                                <i class="fas fa-user-clock me-1"></i>มอบอำนาจ
+                            </a>
+                            {% endif %}
                             {% endif %}
                         {% endif %}
 

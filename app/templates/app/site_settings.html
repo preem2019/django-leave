@@ -29,6 +29,18 @@
                 </div>
                 
                 <hr>
+
+                <h5 class="mb-3">การตั้งค่าระบบ (System)</h5>
+                <div class="mb-3 form-check">
+                    <input type="checkbox" class="form-check-input" name="{{ form.force_password_change_enabled.name }}" id="{{ form.force_password_change_enabled.id_for_label }}" {% if form.force_password_change_enabled.value %}checked{% endif %}>
+                    <label class="form-check-label" for="{{ form.force_password_change_enabled.id_for_label }}">
+                        {{ form.force_password_change_enabled.label }}
+                    </label>
+                    <small class="form-text text-muted d-block">
+                        หากเปิดใช้งาน พนักงานที่ถูกสร้างใหม่หรือรีเซ็ตรหัสผ่าน จะถูกบังคับให้ไปหน้าเปลี่ยนรหัสผ่านทันที
+                    </small>
+                </div>
+                <hr>
                 <h5 class="mb-3">โทนสี (Theme Colors)</h5>
                 <div class="row">
                     <div class="col-md-6 mb-3">

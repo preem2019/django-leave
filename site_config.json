@@ -1,6 +1,7 @@
 {
     "brand_name": "eLeave",
     "footer_text": "&copy; 2025 ระบบขออนุญาตออกนอกสถานที่",
+    "force_password_change_enabled": false,
     "color_primary": "#00afdb",
     "color_success": "#198754",
     "color_warning": "#f39c12",

@@ -16,7 +16,14 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.utils import timezone
 
 # --- 4. Local Application Imports ---
-from .forms import EmployeeCreationForm, EmployeeUpdateForm, SiteConfigurationForm, UserProfileForm, CustomPasswordChangeForm
+from .forms import (
+    EmployeeCreationForm,
+    EmployeeUpdateForm,
+    SiteConfigurationForm,
+    UserProfileForm,
+    CustomPasswordChangeForm,
+    DelegationForm,
+)
 from .models import LeaveRequest, Employee, ApprovalHistory, InOutHistory, VisitorLog
 from .utils import send_notification_email, send_notification_line
 
@@ -117,27 +124,46 @@ def create_leave_request(request):
         leave_request.refresh_from_db()
 
         try:
+            # 1. ค้นหา Manager (เหมือนเดิม)
             manager = Employee.objects.get(
                 department=employee.department, role__role_name__iexact="Manager"
             )
+
+            # --- ⬇️ (เพิ่มตรรกะ Delegation) ⬇️ ---
+            approver_to_assign = manager  # 2. ตั้งค่าผู้อนุมัติตัวจริงไว้ก่อน
+
+            # 3. ตรวจสอบว่า Manager ลาหยุด และ ได้ตั้งค่าตัวแทนไว้หรือไม่
+            today = timezone.now().date()
+
+            if (
+                manager.delegate_approver
+                and manager.delegate_start_date
+                and manager.delegate_end_date
+                and manager.delegate_start_date <= today <= manager.delegate_end_date
+            ):
+                approver_to_assign = manager.delegate_approver
+            # 4. สร้าง History โดยใช้ "ผู้อนุมัติ" ที่ถูกต้อง (approver_to_assign)
             ApprovalHistory.objects.create(
                 request=leave_request,
-                approver=manager,
+                approver=approver_to_assign,  # ⬅️ (แก้ไข)
                 approval_order=1,
                 status="Pending",
             )
-            messages.success(request, "ส่งคำขอสำเร็จ กำลังรอการอนุมัติจากผู้จัดการ")
+            messages.success(
+                request, f"ส่งคำขอสำเร็จ กำลังรอการอนุมัติจาก {approver_to_assign.name}"
+            )  # ⬅️ (แก้ไข)
 
+            # 5. ส่ง Email/Line ไปยัง "ผู้อนุมัติ" ที่ถูกต้อง (approver_to_assign)
             send_notification_email(
                 subject=f"คำขอใหม่ [{leave_request.request_id}] จากคุณ {employee.name}",
                 message_body=f"มีคำขอออกนอกสถานที่ใหม่จากคุณ {employee.name} รอการอนุมัติจากคุณ",
-                recipient=manager,
+                recipient=approver_to_assign,  # ⬅️ (แก้ไข)
                 request_obj=leave_request,
             )
 
-            # --- Send Line ---
+            # --- (แก้ไข) ---
             line_message = (
-                f"สวัสดีคุณ {manager.name}\n\n"
+                f"สวัสดีคุณ {approver_to_assign.name}\n\n"  # ⬅️ (แก้ไข)
                 f"มีคำขอจากคุณ {leave_request.employee.name} รอการอนุมัติจากคุณ\n\n"
                 f"---\n"
                 f"รายละเอียดคำขอ:\n"
@@ -148,7 +174,7 @@ def create_leave_request(request):
                 f"  เหตุผล: {leave_request.reason}\n"
                 f"---"
             )
-            send_notification_line(line_message, manager)
+            send_notification_line(line_message, approver_to_assign)  # ⬅️ (แก้ไข)
             # -----------------
 
         except Employee.DoesNotExist:
@@ -404,20 +430,32 @@ def process_approval(request, history_id):
             history.status = "Approved"
             if history.approval_order == 1:  # Manager
                 try:
+                    # 1. ค้นหา Supervisor (เหมือนเดิม)
                     supervisor = Employee.objects.get(
                         department=leave_request.employee.department,
                         role__role_name__iexact="Supervisor",
                     )
+
+                    # --- ⬇️ (เพิ่มตรรกะ Delegation) ⬇️ ---
+                    approver_to_assign = supervisor  # 2. ตั้งค่าตัวจริง
+
+                    # (สันนิษฐานว่าคุณได้เพิ่มฟิลด์ is_on_leave และ delegate_approver ใน Model แล้ว)
+                    if supervisor.is_on_leave and supervisor.delegate_approver:
+                        approver_to_assign = supervisor.delegate_approver
+                    # --- ⬆️ (สิ้นสุดตรรกะ) ⬆️ ---
+
                     leave_request.current_approver_role = "supervisor"
+
+                    # 3. สร้าง History และส่งแจ้งเตือนไปยัง approver_to_assign
                     ApprovalHistory.objects.create(
                         request=leave_request,
-                        approver=supervisor,
+                        approver=approver_to_assign,  # ⬅️ (แก้ไข)
                         approval_order=2,
                         status="Pending",
                     )
                     messages.success(
                         request,
-                        f"อนุมัติคำขอ ID: {leave_request.request_id} สำเร็จ ส่งต่อไปยัง Supervisor",
+                        f"อนุมัติคำขอ ID: {leave_request.request_id} สำเร็จ ส่งต่อไปยัง {approver_to_assign.name}",  # ⬅️ (แก้ไข)
                     )
 
                     email_message_body = (
@@ -426,12 +464,12 @@ def process_approval(request, history_id):
                     send_notification_email(
                         subject=f"คำขอ [{leave_request.request_id}] รอการอนุมัติจากคุณ",
                         message_body=email_message_body,
-                        recipient=supervisor,
+                        recipient=approver_to_assign,  # ⬅️ (แก้ไข)
                         request_obj=leave_request,
                     )
-                    # --- Send Line ---
+                    # --- (แก้ไข) ---
                     line_message = (
-                        f"สวัสดีคุณ {supervisor.name}\n\n"
+                        f"สวัสดีคุณ {approver_to_assign.name}\n\n"  # ⬅️ (แก้ไข)
                         f"มีคำขอจากคุณ {leave_request.employee.name} รอการอนุมัติจากคุณ\n\n"
                         f"---\n"
                         f"รายละเอียดคำขอ:\n"
@@ -442,7 +480,7 @@ def process_approval(request, history_id):
                         f"  เหตุผล: {leave_request.reason}\n"
                         f"---"
                     )
-                    send_notification_line(line_message, supervisor)
+                    send_notification_line(line_message, approver_to_assign)  # ⬅️ (แก้ไข)
                     # -----------------
                 except Employee.DoesNotExist:
                     leave_request.status = "Rejected"
@@ -554,6 +592,7 @@ def process_approval(request, history_id):
         history.save()
     return redirect("app:approval-inbox")
 
+
 @login_required
 def profile_edit_view(request):
     """
@@ -577,24 +616,85 @@ def profile_edit_view(request):
     else:
         # ส่ง instance ของ employee เข้าไป เพื่อให้ฟอร์มดึงข้อมูลปัจจุบันมาแสดง
         form = UserProfileForm(instance=employee)
-    
+
     # Context ที่จำเป็นสำหรับ base.html (Navbar)
     # (จำเป็นต้องมีเพื่อให้เมนูแสดงผลถูกต้อง)
     try:
-        is_approver = employee.role.role_name.lower() in ['manager', 'supervisor', 'hr', 'safety']
-        approval_inbox_count = ApprovalHistory.objects.filter(approver=employee, status='Pending').count()
+        is_approver = employee.role.role_name.lower() in [
+            "manager",
+            "supervisor",
+            "hr",
+            "safety",
+        ]
+        approval_inbox_count = ApprovalHistory.objects.filter(
+            approver=employee, status="Pending"
+        ).count()
     except Exception:
         is_approver = False
         approval_inbox_count = 0
 
     context = {
-        'form': form,
-        'is_hr_or_admin': is_hr_or_admin(request.user),
-        'is_security': is_security(request.user),
-        'is_approver_or_admin': is_approver or is_hr_or_admin(request.user),
-        'approval_inbox_count': approval_inbox_count,
+        "form": form,
+        "is_hr_or_admin": is_hr_or_admin(request.user),
+        "is_security": is_security(request.user),
+        "is_approver_or_admin": is_approver or is_hr_or_admin(request.user),
+        "approval_inbox_count": approval_inbox_count,
     }
     return render(request, "app/profile_edit.html", context)
+
+
+# ในไฟล์ app/views.py
+
+
+@login_required
+def set_delegation_view(request):
+    """
+    View สำหรับให้ผู้อนุมัติ (Manager/Supervisor) ตั้งค่าการมอบอำนาจ
+    (เวอร์ชันแก้ไข: แก้ไขตรรกะการกรอง position_level และ role)
+    """
+    try:
+        employee = request.user.employee
+    except Employee.DoesNotExist:
+        messages.error(request, "ไม่พบโปรไฟล์พนักงานของคุณ")
+        return redirect("app:dashboard")
+
+    # --- ⬇️ (นี่คือส่วนที่แก้ไข) ⬇️ ---
+
+    # 1. ดึงระดับตำแหน่ง (Level) ของผู้ใช้ปัจจุบัน
+    # (สมมติว่า Level ต่ำ = ยศสูง เช่น Manager=1, Supervisor=2, Staff=3)
+    current_user_level = employee.position.position_level
+
+    # 2. กรองตัวเลือกผู้รับมอบอำนาจ (แก้ไขตรรกะ)
+    possible_delegates = Employee.objects.filter(
+        # เงื่อนไข 1: ต้องอยู่ในแผนกเดียวกัน
+        department=employee.department,
+        # เงื่อนไข 2: ต้องมีระดับตำแหน่ง "เท่ากันหรือต่ำกว่าเรา" (ตัวเลข Level มากกว่าหรือเท่ากับเรา)
+        position__position_level__gte=current_user_level,
+        # (เราลบฟิลเตอร์ role__role_name__in ออก)
+    ).exclude(
+        pk=employee.pk
+    )  # เงื่อนไข 3: ต้องไม่ใช่ตัวเราเอง
+    # --- ⬆️ (สิ้นสุดส่วนที่แก้ไข) ⬆️ ---
+
+    if request.method == "POST":
+        form = DelegationForm(request.POST, instance=employee)
+        # ⛔️ สำคัญ: ต้องกำหนด queryset ให้ฟอร์มอีกครั้งก่อน .is_valid()
+        form.fields["delegate_approver"].queryset = possible_delegates
+
+        if form.is_valid():
+            form.save()
+            messages.success(request, "บันทึกการตั้งค่าการมอบอำนาจเรียบร้อยแล้ว")
+            return redirect("app:set-delegation")  # โหลดหน้าเดิม
+        else:
+            messages.error(request, "ข้อมูลไม่ถูกต้อง กรุณาลองอีกครั้ง")
+    else:
+        # กรณี GET: ดึงข้อมูลปัจจุบันมาแสดง
+        form = DelegationForm(instance=employee)
+        form.fields["delegate_approver"].queryset = possible_delegates
+
+    context = {"form": form}
+    return render(request, "app/delegation_settings.html", context)
+
 
 # ===== (เพิ่มใหม่) ส่วนของโปรไฟล์พนักงาน =====
 @login_required
@@ -615,7 +715,7 @@ def profile_edit_view(request):
 
     if request.method == "POST":
         # ตรวจสอบว่าปุ่มไหนถูกกด จาก attribute 'name' ของปุ่ม submit
-        
+
         # --- กรณีที่ 1: ผู้ใช้กดปุ่ม "บันทึกการเปลี่ยนแปลง" (ข้อมูลส่วนตัว) ---
         if "action" in request.POST and request.POST["action"] == "update_profile":
             profile_form = UserProfileForm(request.POST, instance=employee)
@@ -632,31 +732,40 @@ def profile_edit_view(request):
             if password_form.is_valid():
                 user = password_form.save()
                 # สำคัญมาก: ต้องอัปเดต session เพื่อไม่ให้ผู้ใช้หลุดออกจากระบบ
-                update_session_auth_hash(request, user)  
+                update_session_auth_hash(request, user)
                 messages.success(request, "เปลี่ยนรหัสผ่านเรียบร้อยแล้ว")
                 return redirect("app:profile-edit")
             else:
                 # ไม่ต้องแสดง error "ข้อมูลไม่ถูกต้อง" ซ้ำ
                 # ตัวฟอร์ม `password_form` จะแสดง error ของมันเอง (เช่น รหัสเก่าผิด, รหัสใหม่ไม่ตรงกัน)
-                pass 
+                pass
 
     # Context ที่จำเป็นสำหรับ base.html (Navbar)
     try:
-        is_approver = employee.role.role_name.lower() in ['manager', 'supervisor', 'hr', 'safety']
-        approval_inbox_count = ApprovalHistory.objects.filter(approver=employee, status='Pending').count()
+        is_approver = employee.role.role_name.lower() in [
+            "manager",
+            "supervisor",
+            "hr",
+            "safety",
+        ]
+        approval_inbox_count = ApprovalHistory.objects.filter(
+            approver=employee, status="Pending"
+        ).count()
     except Exception:
         is_approver = False
         approval_inbox_count = 0
 
     context = {
-        'profile_form': profile_form,   # ⬅️ ส่งฟอร์มที่ 1
-        'password_form': password_form, # ⬅️ ส่งฟอร์มที่ 2
-        'is_hr_or_admin': is_hr_or_admin(request.user),
-        'is_security': is_security(request.user),
-        'is_approver_or_admin': is_approver or is_hr_or_admin(request.user),
-        'approval_inbox_count': approval_inbox_count,
+        "profile_form": profile_form,  # ⬅️ ส่งฟอร์มที่ 1
+        "password_form": password_form,  # ⬅️ ส่งฟอร์มที่ 2
+        "is_hr_or_admin": is_hr_or_admin(request.user),
+        "is_security": is_security(request.user),
+        "is_approver_or_admin": is_approver or is_hr_or_admin(request.user),
+        "approval_inbox_count": approval_inbox_count,
     }
     return render(request, "app/profile_edit.html", context)
+
+
 # --- ส่วนของ รปภ. (Security Guard) ---
 @login_required
 @user_passes_test(is_security, login_url="/")
@@ -766,14 +875,15 @@ def record_time_in(request, history_id):
         history.time_in = timezone.now()
         history.status = "COMPLETED"
 
-        if 'return_image' in request.FILES:
-            history.return_image = request.FILES['return_image']
+        if "return_image" in request.FILES:
+            history.return_image = request.FILES["return_image"]
 
         history.save()
         messages.success(
             request, f'บันทึกเวลากลับเข้าสำหรับคุณ "{history.employee.name}" เรียบร้อยแล้ว'
         )
     return redirect("app:security-dashboard")
+
 
 # --- ส่วนของรายงาน (HR/Admin) ---
 @login_required
@@ -886,97 +996,114 @@ def employee_list_view(request):
 
 
 @login_required
-@user_passes_test(is_hr_or_admin, login_url='/')
+@user_passes_test(is_hr_or_admin, login_url="/")
 def statistics_view(request):
     """
     View สำหรับแสดงผล Dashboard สรุปสถิติ (สำหรับ HR/Admin)
     """
-    
+
     # --- START: เพิ่มโค้ดสำหรับ Navbar (ที่ขาดหายไป) ---
     # (จำเป็นต้องดึงข้อมูลเหล่านี้เพื่อให้เมนูใน base.html แสดงผลถูกต้อง)
     navbar_context = {}
     try:
         employee = request.user.employee
-        pending_my_approval = ApprovalHistory.objects.filter(approver=employee, status='Pending')
-        is_approver = employee.role.role_name.lower() in ['manager', 'supervisor', 'hr', 'safety']
-        
+        pending_my_approval = ApprovalHistory.objects.filter(
+            approver=employee, status="Pending"
+        )
+        is_approver = employee.role.role_name.lower() in [
+            "manager",
+            "supervisor",
+            "hr",
+            "safety",
+        ]
+
         navbar_context = {
-            'is_approver_or_admin': is_approver or is_hr_or_admin(request.user),
-            'is_hr_or_admin': is_hr_or_admin(request.user),
-            'is_security': is_security(request.user),
-            'approval_inbox_count': pending_my_approval.count(),
+            "is_approver_or_admin": is_approver or is_hr_or_admin(request.user),
+            "is_hr_or_admin": is_hr_or_admin(request.user),
+            "is_security": is_security(request.user),
+            "approval_inbox_count": pending_my_approval.count(),
         }
     except Employee.DoesNotExist:
         # กรณี Superuser ที่ไม่มีโปรไฟล์ Employee (แบบเดียวกับหน้า Dashboard)
         is_admin_or_superuser = request.user.is_superuser
         navbar_context = {
-            'is_approver_or_admin': is_admin_or_superuser,
-            'is_hr_or_admin': is_admin_or_superuser,
-            'is_security': False,
-            'approval_inbox_count': 0,
+            "is_approver_or_admin": is_admin_or_superuser,
+            "is_hr_or_admin": is_admin_or_superuser,
+            "is_security": False,
+            "approval_inbox_count": 0,
         }
     # --- END: เพิ่มโค้ดสำหรับ Navbar ---
 
     # 1. สถิติ: จำนวนคำขอแยกตามสถานะ (โค้ดเดิม)
-    status_counts = LeaveRequest.objects.values('status') \
-                                        .annotate(count=Count('status')) \
-                                        .order_by('status')
-    
+    status_counts = (
+        LeaveRequest.objects.values("status")
+        .annotate(count=Count("status"))
+        .order_by("status")
+    )
+
     # 2. สถิติ: จำนวนคำขอแยกตามแผนก (โค้ดเดิม)
-    department_counts = LeaveRequest.objects.values('employee__department__department_name') \
-                                            .annotate(count=Count('request_id')) \
-                                            .order_by('-count')
+    department_counts = (
+        LeaveRequest.objects.values("employee__department__department_name")
+        .annotate(count=Count("request_id"))
+        .order_by("-count")
+    )
 
     # 3. สถิติ: จำนวนคำขอแยกตามระยะเวลา (โค้ดเดิม)
-    duration_counts = LeaveRequest.objects.values('leave_duration') \
-                                          .annotate(count=Count('leave_duration')) \
-                                          .order_by('leave_duration')
+    duration_counts = (
+        LeaveRequest.objects.values("leave_duration")
+        .annotate(count=Count("leave_duration"))
+        .order_by("leave_duration")
+    )
 
     # 4. สถิติ: จำนวนคำขอรายเดือน (โค้ดเดิมที่แก้ไข Timezone แล้ว)
-    requests_per_month = LeaveRequest.objects.annotate(
-        request_date=Cast('request_datetime', output_field=DateField())
-    ).annotate(
-        month=TruncMonth('request_date')
-    ).values('month') \
-     .annotate(count=Count('request_id')) \
-     .order_by('month')
+    requests_per_month = (
+        LeaveRequest.objects.annotate(
+            request_date=Cast("request_datetime", output_field=DateField())
+        )
+        .annotate(month=TruncMonth("request_date"))
+        .values("month")
+        .annotate(count=Count("request_id"))
+        .order_by("month")
+    )
 
     # 5. จัดเตรียมข้อมูลสำหรับ Chart.js (โค้ดเดิม)
     import json
-    
+
     status_data = {
-        'labels': [s['status'] for s in status_counts],
-        'data': [s['count'] for s in status_counts],
-    }
-    
-    department_data = {
-        'labels': [d['employee__department__department_name'] for d in department_counts],
-        'data': [d['count'] for d in department_counts],
-    }
-    
-    duration_data = {
-        'labels': [d['leave_duration'] for d in duration_counts],
-        'data': [d['count'] for d in duration_counts],
+        "labels": [s["status"] for s in status_counts],
+        "data": [s["count"] for s in status_counts],
     }
 
-    month_labels = [m['month'].strftime('%Y-%m') for m in requests_per_month]
-    month_data = [m['count'] for m in requests_per_month]
+    department_data = {
+        "labels": [
+            d["employee__department__department_name"] for d in department_counts
+        ],
+        "data": [d["count"] for d in department_counts],
+    }
+
+    duration_data = {
+        "labels": [d["leave_duration"] for d in duration_counts],
+        "data": [d["count"] for d in duration_counts],
+    }
+
+    month_labels = [m["month"].strftime("%Y-%m") for m in requests_per_month]
+    month_data = [m["count"] for m in requests_per_month]
 
     context = {
-        'status_data_json': json.dumps(status_data),
-        'department_data_json': json.dumps(department_data),
-        'duration_data_json': json.dumps(duration_data),
-        'month_labels_json': json.dumps(month_labels),
-        'month_data_json': json.dumps(month_data),
-        'total_requests': LeaveRequest.objects.count(),
-        'total_visitors': VisitorLog.objects.count(),
+        "status_data_json": json.dumps(status_data),
+        "department_data_json": json.dumps(department_data),
+        "duration_data_json": json.dumps(duration_data),
+        "month_labels_json": json.dumps(month_labels),
+        "month_data_json": json.dumps(month_data),
+        "total_requests": LeaveRequest.objects.count(),
+        "total_visitors": VisitorLog.objects.count(),
     }
-    
+
     # --- START: เพิ่ม Navbar context เข้าไปใน context หลัก ---
     context.update(navbar_context)
     # --- END: เพิ่ม Navbar context ---
-    
-    return render(request, 'app/statistics.html', context)
+
+    return render(request, "app/statistics.html", context)
 
 
 @login_required
@@ -1091,6 +1218,7 @@ def site_settings_view(request):
     context = {"form": form}
     return render(request, "app/site_settings.html", context)
 
+
 @login_required
 def force_change_password_view(request):
     """
@@ -1106,7 +1234,7 @@ def force_change_password_view(request):
 
     # ถ้าผู้ใช้เข้ามาหน้านี้ ทั้งๆ ที่ไม่ต้องเปลี่ยนแล้ว ให้ส่งไปหน้าหลัก
     if not employee.must_change_password and not request.user.is_superuser:
-         return redirect("app:dashboard")
+        return redirect("app:dashboard")
 
     if request.method == "POST":
         password_form = CustomPasswordChangeForm(request.user, request.POST)
@@ -1126,24 +1254,29 @@ def force_change_password_view(request):
 
     # เราต้องดึง Context ที่ Navbar (base.html) ต้องใช้
     try:
-        is_approver = employee.role.role_name.lower() in ['manager', 'supervisor', 'hr', 'safety']
-        approval_inbox_count = ApprovalHistory.objects.filter(approver=employee, status='Pending').count()
+        is_approver = employee.role.role_name.lower() in [
+            "manager",
+            "supervisor",
+            "hr",
+            "safety",
+        ]
+        approval_inbox_count = ApprovalHistory.objects.filter(
+            approver=employee, status="Pending"
+        ).count()
     except Exception:
         is_approver = False
         approval_inbox_count = 0
 
     context = {
-        'password_form': password_form,
-
+        "password_form": password_form,
         # --- Flag สำหรับ base.html ---
-        'must_change_password_page': True,
-
+        "must_change_password_page": True,
         # --- Context สำหรับ Navbar ---
-        'is_hr_or_admin': is_hr_or_admin(request.user),
-        'is_security': is_security(request.user),
-        'is_approver_or_admin': is_approver or is_hr_or_admin(request.user),
-        'approval_inbox_count': approval_inbox_count,
-        'site_config': get_config_data() # (ต้องมี get_config_data() ใน views.py ด้วย)
+        "is_hr_or_admin": is_hr_or_admin(request.user),
+        "is_security": is_security(request.user),
+        "is_approver_or_admin": is_approver or is_hr_or_admin(request.user),
+        "approval_inbox_count": approval_inbox_count,
+        "site_config": get_config_data(),  # (ต้องมี get_config_data() ใน views.py ด้วย)
     }
 
     return render(request, "app/force_change_password.html", context)
